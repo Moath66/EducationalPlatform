@@ -2,9 +2,9 @@ import { useState } from "react";
 import Input from "../../components/UI/Input";
 import Button from "../../components/UI/Button";
 import MainLayout from "../../layouts/MainLayout";
+import apiClient from "../../api/apiClient";
 
 export default function RegisterPage() {
-  // State for inputs
   const [formData, setFormData] = useState({
     name: "",
     email: "",
@@ -13,7 +13,6 @@ export default function RegisterPage() {
     password: "",
   });
 
-  // Handle change
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -21,26 +20,14 @@ export default function RegisterPage() {
     });
   };
 
-  // Submit handler
   const handleSubmit = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert("❌ خطأ: " + data.message);
-        return;
-      }
+      const res = await apiClient.post("/api/auth/register", formData);
 
       alert("✔ تم التسجيل بنجاح!");
-    } catch (error) {
-      alert("❌ لم يتم الاتصال بالسيرفر");
-      console.log(error);
+    } catch (err) {
+      alert("❌ حدث خطأ أثناء التسجيل");
+      console.log(err);
     }
   };
 

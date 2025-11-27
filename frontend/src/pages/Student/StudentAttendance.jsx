@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import apiClient from "../../api/apiClient"; // ★ مهم
 
 export default function StudentAttendance() {
   const [attendance, setAttendance] = useState([]);
@@ -17,12 +18,12 @@ export default function StudentAttendance() {
 
   const fetchAttendance = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/attendance/student/${user._id}`);
-      const data = await res.json();
+      const res = await apiClient.get(`/api/attendance/student/${user._id}`);
 
-      if (res.ok) {
-        setAttendance(data.attendance);
-        calculateStats(data.attendance);
+      if (res.status === 200) {
+        const records = res.data.attendance;
+        setAttendance(records);
+        calculateStats(records);
       }
     } catch (err) {
       console.log(err);
@@ -34,14 +35,13 @@ export default function StudentAttendance() {
     const total = records.length;
     const present = records.filter((r) => r.status === "present").length;
     const absent = total - present;
-
     const percentage = total > 0 ? Math.round((present / total) * 100) : 0;
 
     setStats({ total, present, absent, percentage });
   };
 
   return (
-    <div className="p-6">
+    <div className="p-6" dir="rtl">
       <h1 className="text-3xl font-bold mb-6 text-right">📊 تقرير الحضور</h1>
 
       {/* إحصائيات */}
@@ -50,17 +50,22 @@ export default function StudentAttendance() {
           <p className="text-gray-500">إجمالي الجلسات</p>
           <p className="text-2xl font-bold">{stats.total}</p>
         </div>
+
         <div className="bg-green-100 p-5 rounded-xl shadow text-center">
           <p className="text-gray-700">📗 عدد الحضور</p>
           <p className="text-2xl font-bold text-green-700">{stats.present}</p>
         </div>
+
         <div className="bg-red-100 p-5 rounded-xl shadow text-center">
           <p className="text-gray-700">📕 عدد الغياب</p>
           <p className="text-2xl font-bold text-red-700">{stats.absent}</p>
         </div>
+
         <div className="bg-blue-100 p-5 rounded-xl shadow text-center">
           <p className="text-gray-700">📈 نسبة الحضور</p>
-          <p className="text-2xl font-bold text-blue-700">{stats.percentage}%</p>
+          <p className="text-2xl font-bold text-blue-700">
+            {stats.percentage}%
+          </p>
         </div>
       </div>
 
@@ -71,7 +76,7 @@ export default function StudentAttendance() {
         </div>
       )}
 
-      {/* جدول تفاصيل الجلسات */}
+      {/* جدول الحضور */}
       <table className="w-full text-right bg-white rounded-xl shadow overflow-hidden">
         <thead className="bg-gray-200">
           <tr>

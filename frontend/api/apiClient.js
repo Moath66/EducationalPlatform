@@ -1,16 +1,20 @@
-const BASE_URL = import.meta.env.VITE_API_URL;
+import axios from "axios";
 
-export const apiClient = async (endpoint, method = "GET", data) => {
-  const options = {
-    method,
-    headers: {
-      "Content-Type": "application/json",
-    },
-  };
+const apiClient = axios.create({
+  baseURL: "https://educationalplatform-zwvt.onrender.com",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  withCredentials: false,
+});
 
-  if (data) options.body = JSON.stringify(data);
+// إضافة التوكين لكل الطلبات
+apiClient.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
+});
 
-  const res = await fetch(`${BASE_URL}${endpoint}`, options);
-  const json = await res.json();
-  return json;
-};
+export default apiClient;

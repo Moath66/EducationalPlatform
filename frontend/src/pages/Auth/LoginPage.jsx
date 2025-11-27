@@ -3,6 +3,7 @@ import Input from "../../components/UI/Input";
 import Button from "../../components/UI/Button";
 import { Link } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
+import apiClient from "../../api/apiClient";
 
 export default function LoginPage() {
   const [formData, setFormData] = useState({
@@ -21,36 +22,22 @@ export default function LoginPage() {
   // Handle Login
   const handleSubmit = async () => {
     try {
-      const res = await fetch("http://localhost:5000/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
-      });
+      const res = await apiClient.post("/api/auth/login", formData);
 
-      const data = await res.json();
-
-      if (!res.ok) {
-        alert("❌ خطأ: " + data.message);
-        return;
-      }
-
-      // حفظ البيانات في المتصفح
-      localStorage.setItem("token", data.token);
-      localStorage.setItem("role", data.user.role);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      // Save user + token
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("role", res.data.user.role);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
 
       alert("✔ تسجيل الدخول ناجح!");
 
-      // إعادة توجيه حسب الدور
-      if (data.user.role === "admin") {
-        window.location.href = "/admin";
-      } else if (data.user.role === "teacher") {
-        window.location.href = "/teacher";
-      } else {
-        window.location.href = "/student";
-      }
+      // Redirect based on role
+      const role = res.data.user.role;
+      if (role === "admin") window.location.href = "/admin";
+      else if (role === "teacher") window.location.href = "/teacher";
+      else window.location.href = "/student";
     } catch (error) {
-      alert("❌ لم يتم الاتصال بالسيرفر");
+      alert("❌ خطأ في تسجيل الدخول");
       console.log(error);
     }
   };
@@ -83,16 +70,6 @@ export default function LoginPage() {
               placeholder="••••••••"
               onChange={handleChange}
             />
-          </div>
-
-          {/* Forget Password */}
-          <div className="text-left mb-5">
-            <Link
-              to="/forgot-password"
-              className="text-teal-700 text-sm hover:underline transition"
-            >
-              نسيت كلمة المرور؟
-            </Link>
           </div>
 
           {/* Login Button */}
