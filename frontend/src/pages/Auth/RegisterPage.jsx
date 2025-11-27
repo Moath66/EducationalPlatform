@@ -21,12 +21,15 @@ export default function RegisterPage() {
 
   const handleSubmit = async () => {
     try {
-      const res = await apiClient.post("/api/auth/register", formData);
+      const res = await apiClient.post("/api/auth/register", {
+        ...formData,
+        role: "student",
+      });
 
       alert("✔ تم التسجيل بنجاح!");
     } catch (err) {
       alert("❌ حدث خطأ أثناء التسجيل");
-      console.log(err);
+      console.log(err.response?.data || err);
     }
   };
 
