@@ -3,8 +3,7 @@ import Input from "../../components/UI/Input";
 import Button from "../../components/UI/Button";
 import { Link } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
-import apiClient from "../../api/apiClient.js";
-
+import apiClient from "../../../api/apiClient.js";
 export default function LoginPage() {
   const [formData, setFormData] = useState({
     email: "",
