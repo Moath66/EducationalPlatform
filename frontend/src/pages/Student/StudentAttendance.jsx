@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import apiClient from "../../api/apiClient"; // ★ مهم
+import apiClient from "../../api/apiClient.js"; // ★ مهم
 
 export default function StudentAttendance() {
   const [attendance, setAttendance] = useState([]);

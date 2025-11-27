@@ -2,7 +2,7 @@ import { useState } from "react";
 import Input from "../../components/UI/Input";
 import Button from "../../components/UI/Button";
 import MainLayout from "../../layouts/MainLayout";
-import apiClient from "../../api/apiClient";
+import apiClient from "../../api/apiClient.js";
 
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
