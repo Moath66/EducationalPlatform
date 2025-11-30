@@ -35,3 +35,35 @@ exports.deleteUser = async (req, res) => {
     res.status(500).json({ message: "خطأ أثناء الحذف" });
   }
 };
+
+exports.getPendingUsers = async (req, res) => {
+  try {
+    const users = await User.find({ isApproved: false }).select("-password");
+    res.json(users);
+  } catch (err) {
+    res.status(500).json({ message: "خطأ أثناء جلب الطلبات" });
+  }
+};
+
+exports.approveUser = async (req, res) => {
+  try {
+    const user = await User.findByIdAndUpdate(
+      req.params.id,
+      { isApproved: true },
+      { new: true }
+    );
+
+    res.json({ message: "تمت الموافقة على المستخدم", user });
+  } catch (err) {
+    res.status(500).json({ message: "خطأ أثناء الموافقة" });
+  }
+};
+
+exports.rejectUser = async (req, res) => {
+  try {
+    await User.findByIdAndDelete(req.params.id);
+    res.json({ message: "تم رفض المستخدم وحذف طلبه" });
+  } catch (err) {
+    res.status(500).json({ message: "خطأ أثناء الرفض" });
+  }
+};

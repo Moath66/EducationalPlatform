@@ -3,14 +3,14 @@ import Input from "../../components/UI/Input";
 import Button from "../../components/UI/Button";
 import { Link } from "react-router-dom";
 import MainLayout from "../../layouts/MainLayout";
-import apiClient from "../../../api/apiClient.js";
+import apiClient from "../../../api/apiClient";
+
 export default function LoginPage() {
   const [formData, setFormData] = useState({
     email: "",
     password: "",
   });
 
-  // Handle input change
   const handleChange = (e) => {
     setFormData({
       ...formData,
@@ -18,26 +18,31 @@ export default function LoginPage() {
     });
   };
 
-  // Handle Login
   const handleSubmit = async () => {
     try {
       const res = await apiClient.post("/api/auth/login", formData);
 
-      // Save user + token
+      // Check if approved
+      if (!res.data.user.isApproved) {
+        alert("⛔ حسابك لم تتم الموافقة عليه بعد. يرجى انتظار موافقة الإدارة.");
+        return;
+      }
+
+      // Save user info
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("role", res.data.user.role);
       localStorage.setItem("user", JSON.stringify(res.data.user));
 
       alert("✔ تسجيل الدخول ناجح!");
 
-      // Redirect based on role
       const role = res.data.user.role;
+
       if (role === "admin") window.location.href = "/admin";
       else if (role === "teacher") window.location.href = "/teacher";
       else window.location.href = "/student";
     } catch (error) {
       alert("❌ خطأ في تسجيل الدخول");
-      console.log(error);
+      console.log(error.response?.data || error);
     }
   };
 
@@ -49,7 +54,6 @@ export default function LoginPage() {
             تسجيل الدخول
           </h2>
 
-          {/* Email */}
           <div className="mb-5">
             <Input
               name="email"
@@ -60,7 +64,6 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* Password */}
           <div className="mb-3">
             <Input
               name="password"
@@ -71,7 +74,6 @@ export default function LoginPage() {
             />
           </div>
 
-          {/* Login Button */}
           <Button
             className="w-full py-3 rounded-lg bg-teal-600 text-white text-lg font-medium hover:bg-teal-700 transition"
             onClick={handleSubmit}
@@ -79,7 +81,6 @@ export default function LoginPage() {
             دخول
           </Button>
 
-          {/* Register Link */}
           <p className="text-center mt-6 text-gray-700 text-sm">
             ليس لديك حساب؟
             <Link

@@ -7,6 +7,7 @@ import RequireAdmin from "../middleware/RequireAdmin";
 import AdminDashboard from "../pages/Admin/AdminDashboard";
 import ManageTeachers from "../pages/Admin/ManageTeachers";
 import ManageStudents from "../pages/Admin/ManageStudents";
+import ManagePendingStudents from "../pages/Admin/ManagePendingStudents";
 import StudyPlans from "../pages/Admin/StudyPlans";
 import ClassSessions from "../pages/Admin/ClassSessions";
 import Settings from "../pages/Admin/Settings";
@@ -27,6 +28,7 @@ export default function AppRouter() {
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
 
+        {/* ADMIN */}
         <Route
           path="/admin"
           element={
@@ -50,6 +52,15 @@ export default function AppRouter() {
           element={
             <RequireAdmin>
               <ManageStudents />
+            </RequireAdmin>
+          }
+        />
+
+        <Route
+          path="/admin/pending"
+          element={
+            <RequireAdmin>
+              <ManagePendingStudents />
             </RequireAdmin>
           }
         />
@@ -80,6 +91,8 @@ export default function AppRouter() {
             </RequireAdmin>
           }
         />
+
+        {/* STUDENT */}
         <Route
           path="/student"
           element={
@@ -98,6 +111,7 @@ export default function AppRouter() {
           }
         />
 
+        {/* TEACHER */}
         <Route
           path="/teacher"
           element={

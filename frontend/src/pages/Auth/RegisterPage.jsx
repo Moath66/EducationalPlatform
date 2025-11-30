@@ -2,7 +2,8 @@ import { useState } from "react";
 import Input from "../../components/UI/Input";
 import Button from "../../components/UI/Button";
 import MainLayout from "../../layouts/MainLayout";
-import apiClient from "../../../api/apiClient.js";
+import apiClient from "../../../api/apiClient";
+
 export default function RegisterPage() {
   const [formData, setFormData] = useState({
     name: "",
@@ -26,7 +27,7 @@ export default function RegisterPage() {
         role: "student",
       });
 
-      alert("✔ تم التسجيل بنجاح!");
+      alert("✔ تم التسجيل بنجاح! سيتم مراجعة طلبك من قبل الإدارة");
     } catch (err) {
       alert("❌ حدث خطأ أثناء التسجيل");
       console.log(err.response?.data || err);
