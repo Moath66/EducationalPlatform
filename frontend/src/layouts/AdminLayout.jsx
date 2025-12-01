@@ -6,7 +6,7 @@ export default function AdminLayout({ children }) {
 
   return (
     <div className="min-h-screen flex bg-slate-100" dir="rtl">
-      {/* زر القائمة للجوال فقط */}
+      {/* زر القائمة للجوال */}
       <button
         onClick={() => setOpen(!open)}
         className="lg:hidden fixed top-3 right-3 z-50 bg-white p-2 rounded-lg shadow text-slate-800"
@@ -17,15 +17,11 @@ export default function AdminLayout({ children }) {
       {/* Sidebar */}
       <aside
         className={`
-          w-64 bg-slate-900 text-slate-100 flex flex-col z-40
-          
-          /* في الجوال: ثابت + متحرك */
-          fixed top-0 right-0 h-full 
-          transform ${open ? "translate-x-0" : "translate-x-full"} 
+          bg-slate-900 text-slate-100 flex flex-col z-40
+          fixed top-0 right-0 h-full w-64
+          transform ${open ? "translate-x-0" : "translate-x-full"}
           transition-transform duration-300
-
-          /* في الويب: يظهر دائمًا STATIC ويُلغي الترانسفورم */
-          lg:static lg:translate-x-0 lg:flex
+          lg:static lg:translate-x-0 lg:transform-none lg:w-64
         `}
       >
         <div className="px-6 py-4 border-b border-slate-800">
@@ -35,10 +31,7 @@ export default function AdminLayout({ children }) {
 
         <nav className="flex-1 px-4 py-4 space-y-1 text-sm">
           <AdminNavItem to="/admin" label="لوحة التحكم" />
-
-          {/* زر طلبات التسجيل */}
           <AdminNavItem to="/admin/pending" label="طلبات التسجيل" />
-
           <AdminNavItem to="/admin/teachers" label="إدارة المعلمين" />
           <AdminNavItem to="/admin/students" label="إدارة الطلاب" />
           <AdminNavItem to="/admin/study-plans" label="الخطط والجداول" />
@@ -56,14 +49,8 @@ export default function AdminLayout({ children }) {
         </div>
       </aside>
 
-      {/* Main content */}
-      <main
-        className="
-          flex-1 flex flex-col
-          lg:mr-64   /* يعطي مساحة للسايد بار في الويب */
-        "
-      >
-        {/* Header */}
+      {/* المحتوى الرئيسي */}
+      <main className="flex-1 flex flex-col lg:mr-64">
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6">
           <div className="text-sm text-slate-500">
             مرحباً،{" "}
@@ -77,7 +64,6 @@ export default function AdminLayout({ children }) {
           </Link>
         </header>
 
-        {/* Page content */}
         <div className="p-6">{children}</div>
       </main>
     </div>
