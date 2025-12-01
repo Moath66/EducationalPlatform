@@ -6,7 +6,6 @@ export default function AdminLayout({ children }) {
 
   return (
     <div className="min-h-screen flex bg-slate-100" dir="rtl">
-
       {/* زر القائمة للجوال */}
       <button
         onClick={() => setOpen(!open)}
@@ -15,20 +14,17 @@ export default function AdminLayout({ children }) {
         ☰
       </button>
 
-      {/* Sidebar */}
       <aside
         className={`
-          bg-slate-900 text-slate-100 flex flex-col z-40 w-64 h-full
+    bg-slate-900 text-slate-100 flex flex-col z-40 w-64 h-full
 
-          /* ⭐ جوال فقط */
-          fixed top-0 right-0
-          transform transition-transform duration-300
-          ${open ? "translate-x-0" : "translate-x-full"}
-          lg:hidden
+    /* ⭐ جوال فقط: سايدبار منزلقة */
+    fixed top-0 right-0 transform transition-transform duration-300
+    ${open ? "translate-x-0" : "translate-x-full"}
 
-          /* ⭐ كمبيوتر فقط (يظهر دائمًا بدون أي transform) */
-          lg:static lg:flex lg:translate-x-0 lg:transform-none
-        `}
+    /* ⭐ كمبيوتر فقط: سايدبار ثابتة */
+    hidden lg:flex lg:static lg:translate-x-0 lg:transform-none
+  `}
       >
         <div className="px-6 py-4 border-b border-slate-800">
           <h1 className="text-xl font-bold">لوحة تحكم المشرف</h1>
