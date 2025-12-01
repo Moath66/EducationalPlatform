@@ -1,7 +1,6 @@
 import { Link, NavLink } from "react-router-dom";
 
 export default function AdminLayout({ children }) {
-  const [open, setOpen] = useState(false); // ← لإظهار/إخفاء القائمة في الجوال
 
   return (
     <div className="min-h-screen flex bg-slate-100" dir="rtl">
