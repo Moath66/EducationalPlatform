@@ -1,8 +1,17 @@
 import { Link, NavLink } from "react-router-dom";
 
 export default function AdminLayout({ children }) {
+  const [open, setOpen] = useState(false); // ← لإظهار/إخفاء القائمة في الجوال
+
   return (
     <div className="min-h-screen flex bg-slate-100" dir="rtl">
+      {/* زر القائمة للجوال */}
+      <button
+        onClick={() => setOpen(!open)}
+        className="lg:hidden fixed top-3 right-3 z-50 bg-white p-2 rounded-lg shadow text-slate-800"
+      >
+        ☰
+      </button>
       {/* Sidebar */}
       <aside className="w-64 bg-slate-900 text-slate-100 flex flex-col">
         <div className="px-6 py-4 border-b border-slate-800">
