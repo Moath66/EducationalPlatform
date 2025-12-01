@@ -1,25 +1,10 @@
-import { useState } from "react"; // ← أضف هذا
 import { Link, NavLink } from "react-router-dom";
 
 export default function AdminLayout({ children }) {
-  const [open, setOpen] = useState(false); // ← أضف هذا السطر
-
   return (
     <div className="min-h-screen flex bg-slate-100" dir="rtl">
-      {/* زر القائمة للجوال */}
-      <button
-        onClick={() => setOpen(!open)}
-        className="lg:hidden fixed top-3 right-3 z-50 bg-white p-2 rounded-lg shadow text-slate-800"
-      >
-        ☰
-      </button>
-
-      {/* Sidebar - أضف شرط الإظهار/الإخفاء */}
-      <aside
-        className={`w-64 bg-slate-900 text-slate-100 flex flex-col fixed lg:relative h-full transition-transform duration-300 z-40 ${
-          open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
-        }`}
-      >
+      {/* Sidebar */}
+      <aside className="w-64 bg-slate-900 text-slate-100 flex flex-col">
         <div className="px-6 py-4 border-b border-slate-800">
           <h1 className="text-xl font-bold">لوحة تحكم المشرف</h1>
           <p className="text-xs text-slate-400 mt-1">إدارة المنصة التعليمية</p>
@@ -27,6 +12,7 @@ export default function AdminLayout({ children }) {
 
         <nav className="flex-1 px-4 py-4 space-y-1 text-sm">
           <AdminNavItem to="/admin" label="لوحة التحكم" />
+          {/* زر طلبات التسجيل  ← جديد */}
           <AdminNavItem to="/admin/pending" label="طلبات التسجيل" />
           <AdminNavItem to="/admin/teachers" label="إدارة المعلمين" />
           <AdminNavItem to="/admin/students" label="إدارة الطلاب" />
@@ -45,16 +31,9 @@ export default function AdminLayout({ children }) {
         </div>
       </aside>
 
-      {/* Overlay للجوال */}
-      {open && (
-        <div
-          onClick={() => setOpen(false)}
-          className="lg:hidden fixed inset-0 bg-black/50 z-30"
-        />
-      )}
-
       {/* Main content */}
-      <main className="flex-1 flex flex-col lg:mr-0">
+      <main className="flex-1 flex flex-col">
+        {/* Header */}
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6">
           <div className="text-sm text-slate-500">
             مرحباً،{" "}
@@ -68,6 +47,7 @@ export default function AdminLayout({ children }) {
           </Link>
         </header>
 
+        {/* Page content */}
         <div className="p-6">{children}</div>
       </main>
     </div>
@@ -88,6 +68,7 @@ function AdminNavItem({ to, label }) {
       }
     >
       <span className="text-sm">{label}</span>
+      {/* دائرة أيقونة بسيطة */}
       <span className="w-2 h-2 rounded-full bg-emerald-400/70" />
     </NavLink>
   );
