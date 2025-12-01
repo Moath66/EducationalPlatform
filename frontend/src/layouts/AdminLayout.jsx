@@ -6,6 +6,7 @@ export default function AdminLayout({ children }) {
 
   return (
     <div className="min-h-screen flex bg-slate-100" dir="rtl">
+
       {/* زر القائمة للجوال */}
       <button
         onClick={() => setOpen(!open)}
@@ -17,11 +18,16 @@ export default function AdminLayout({ children }) {
       {/* Sidebar */}
       <aside
         className={`
-          bg-slate-900 text-slate-100 flex flex-col z-40
-          fixed top-0 right-0 h-full w-64
-          transform ${open ? "translate-x-0" : "translate-x-full"}
-          transition-transform duration-300
-          lg:static lg:translate-x-0 lg:transform-none lg:w-64
+          bg-slate-900 text-slate-100 flex flex-col z-40 w-64 h-full
+
+          /* ⭐ جوال فقط */
+          fixed top-0 right-0
+          transform transition-transform duration-300
+          ${open ? "translate-x-0" : "translate-x-full"}
+          lg:hidden
+
+          /* ⭐ كمبيوتر فقط (يظهر دائمًا بدون أي transform) */
+          lg:static lg:flex lg:translate-x-0 lg:transform-none
         `}
       >
         <div className="px-6 py-4 border-b border-slate-800">
@@ -49,7 +55,7 @@ export default function AdminLayout({ children }) {
         </div>
       </aside>
 
-      {/* المحتوى الرئيسي */}
+      {/* Main content */}
       <main className="flex-1 flex flex-col lg:mr-64">
         <header className="h-16 bg-white border-b border-slate-200 flex items-center justify-between px-6">
           <div className="text-sm text-slate-500">
