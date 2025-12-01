@@ -12,6 +12,8 @@ export default function AdminLayout({ children }) {
 
         <nav className="flex-1 px-4 py-4 space-y-1 text-sm">
           <AdminNavItem to="/admin" label="لوحة التحكم" />
+          {/* زر طلبات التسجيل  ← جديد */}
+          <AdminNavItem to="/admin/pending" label="طلبات التسجيل" />
           <AdminNavItem to="/admin/teachers" label="إدارة المعلمين" />
           <AdminNavItem to="/admin/students" label="إدارة الطلاب" />
           <AdminNavItem to="/admin/study-plans" label="الخطط والجداول" />
