@@ -11,6 +11,17 @@ exports.protect = async (req, res, next) => {
 
     req.user = await User.findById(decoded.id).select("-password");
 
+    if (!req.user) {
+      return res.status(401).json({ message: "مستخدم غير موجود" });
+    }
+
+    // 🚨 السماح للأدمِن بالدخول حتى لو غير معتمد
+    if (req.user.role !== "admin" && !req.user.isApproved) {
+      return res
+        .status(403)
+        .json({ message: "لم تتم الموافقة على الحساب بعد" });
+    }
+
     next();
   } catch (err) {
     return res.status(401).json({ message: "توكن غير صالح" });
