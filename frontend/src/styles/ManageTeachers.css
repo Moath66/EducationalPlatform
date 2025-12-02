@@ -1,0 +1,66 @@
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #1e293b;
+}
+
+.teacher-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.btn-add {
+  background: #0f766e;
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+}
+
+.filter-input {
+  width: 250px;
+  padding: 8px;
+  margin-bottom: 14px;
+  border: 1px solid #cbd5e1;
+  border-radius: 6px;
+}
+
+.teacher-table {
+  width: 100%;
+  background: white;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+}
+
+.teacher-table th,
+.teacher-table td {
+  padding: 12px;
+  font-size: 14px;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.status-active {
+  color: green;
+  font-weight: bold;
+}
+
+.status-inactive {
+  color: red;
+  font-weight: bold;
+}
+
+.btn-edit {
+  background: #3b82f6;
+  padding: 6px 12px;
+  color: white;
+  margin-right: 6px;
+  border-radius: 6px;
+}
+
+.btn-delete {
+  background: #dc2626;
+  padding: 6px 12px;
+  color: white;
+  border-radius: 6px;
+}
