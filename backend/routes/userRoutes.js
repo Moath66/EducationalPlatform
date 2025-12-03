@@ -7,6 +7,7 @@ const {
   getPendingUsers,
   approveUser,
   rejectUser,
+  createTeacher,
 } = require("../controllers/userController");
 
 const router = express.Router();

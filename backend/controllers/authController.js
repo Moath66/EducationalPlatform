@@ -17,8 +17,8 @@ exports.registerUser = async (req, res) => {
       phone,
       grade,
       password: hashedPassword,
-      role: "student", // ✅ تثبيت الدور
-      isApproved: false, // ✅ الطلاب لازم موافقة
+      role: "student",     // ✅ تثبيت الدور
+      isApproved: false,   // ✅ الطلاب لازم موافقة
     });
 
     res.status(201).json({
@@ -28,6 +28,7 @@ exports.registerUser = async (req, res) => {
     res.status(500).json({ message: err.message });
   }
 };
+
 
 exports.loginUser = async (req, res) => {
   try {
