@@ -65,10 +65,7 @@ export default function ManageStudents() {
         return;
       }
 
-      await apiClient.post("/api/auth/register", {
-        ...addForm,
-        role: "student",
-      });
+      await apiClient.post("/api/users/create-teacher", addForm);
 
       alert("✔ تم إضافة الطالب بنجاح");
       setShowAdd(false);
@@ -159,7 +156,10 @@ export default function ManageStudents() {
 
   const currentPageSafe = Math.min(currentPage, totalPages);
   const startIndex = (currentPageSafe - 1) * PAGE_SIZE;
-  const pageStudents = filteredStudents.slice(startIndex, startIndex + PAGE_SIZE);
+  const pageStudents = filteredStudents.slice(
+    startIndex,
+    startIndex + PAGE_SIZE
+  );
 
   // إعادة الصفحة للأولى عند تغيير البحث أو الفلتر
   useEffect(() => {
@@ -175,7 +175,8 @@ export default function ManageStudents() {
         <div>
           <h2 className="ms-title">إدارة الطلاب</h2>
           <p className="ms-subtitle">
-            يمكنك هنا إدارة حسابات الطلاب: الإضافة، التعديل، الحذف، ومتابعة حالة التفعيل.
+            يمكنك هنا إدارة حسابات الطلاب: الإضافة، التعديل، الحذف، ومتابعة حالة
+            التفعيل.
           </p>
         </div>
 
@@ -253,7 +254,10 @@ export default function ManageStudents() {
 
                 <td className="ms-td">
                   <div className="ms-actions">
-                    <button onClick={() => openEditModal(s)} className="ms-btnEdit">
+                    <button
+                      onClick={() => openEditModal(s)}
+                      className="ms-btnEdit"
+                    >
                       تعديل
                     </button>
                     <button
@@ -273,21 +277,26 @@ export default function ManageStudents() {
         {!loading && filteredStudents.length > 0 && (
           <div className="ms-pagination">
             <span>
-              صفحة {currentPageSafe} من {totalPages} — عدد الطلاب: {filteredStudents.length}
+              صفحة {currentPageSafe} من {totalPages} — عدد الطلاب:{" "}
+              {filteredStudents.length}
             </span>
 
             <div className="ms-paginationBtns">
               <button
                 disabled={currentPageSafe === 1}
                 onClick={() => setCurrentPage((p) => (p > 1 ? p - 1 : p))}
-                className={`ms-pageBtn ${currentPageSafe === 1 ? "ms-pageBtnDisabled" : ""}`}
+                className={`ms-pageBtn ${
+                  currentPageSafe === 1 ? "ms-pageBtnDisabled" : ""
+                }`}
               >
                 السابق
               </button>
 
               <button
                 disabled={currentPageSafe === totalPages}
-                onClick={() => setCurrentPage((p) => (p < totalPages ? p + 1 : p))}
+                onClick={() =>
+                  setCurrentPage((p) => (p < totalPages ? p + 1 : p))
+                }
                 className={`ms-pageBtn ${
                   currentPageSafe === totalPages ? "ms-pageBtnDisabled" : ""
                 }`}
@@ -312,20 +321,26 @@ export default function ManageStudents() {
             <InputField
               label="البريد الإلكتروني"
               value={addForm.email}
-              onChange={(e) => setAddForm({ ...addForm, email: e.target.value })}
+              onChange={(e) =>
+                setAddForm({ ...addForm, email: e.target.value })
+              }
               placeholder="example@mail.com"
               type="email"
             />
             <InputField
               label="رقم الجوال"
               value={addForm.phone}
-              onChange={(e) => setAddForm({ ...addForm, phone: e.target.value })}
+              onChange={(e) =>
+                setAddForm({ ...addForm, phone: e.target.value })
+              }
               placeholder="05xxxxxxxx"
             />
             <InputField
               label="الصف"
               value={addForm.grade}
-              onChange={(e) => setAddForm({ ...addForm, grade: e.target.value })}
+              onChange={(e) =>
+                setAddForm({ ...addForm, grade: e.target.value })
+              }
               placeholder="مثال: Grade 10"
             />
             <InputField
@@ -339,7 +354,10 @@ export default function ManageStudents() {
             />
 
             <div className="ms-modalActions">
-              <button onClick={() => setShowAdd(false)} className="ms-cancelBtn">
+              <button
+                onClick={() => setShowAdd(false)}
+                className="ms-cancelBtn"
+              >
                 إلغاء
               </button>
               <button onClick={handleAddStudent} className="ms-saveGreen">
@@ -357,31 +375,43 @@ export default function ManageStudents() {
             <InputField
               label="الاسم الكامل"
               value={editForm.name}
-              onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+              onChange={(e) =>
+                setEditForm({ ...editForm, name: e.target.value })
+              }
             />
             <InputField
               label="البريد الإلكتروني"
               value={editForm.email}
-              onChange={(e) => setEditForm({ ...editForm, email: e.target.value })}
+              onChange={(e) =>
+                setEditForm({ ...editForm, email: e.target.value })
+              }
               type="email"
             />
             <InputField
               label="رقم الجوال"
               value={editForm.phone}
-              onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
+              onChange={(e) =>
+                setEditForm({ ...editForm, phone: e.target.value })
+              }
             />
             <InputField
               label="الصف"
               value={editForm.grade}
-              onChange={(e) => setEditForm({ ...editForm, grade: e.target.value })}
+              onChange={(e) =>
+                setEditForm({ ...editForm, grade: e.target.value })
+              }
             />
 
             <p className="ms-note">
-              ملاحظة: لا يمكن تعديل كلمة المرور من هنا، يمكن إضافة شاشة خاصة لإعادة التعيين لاحقاً.
+              ملاحظة: لا يمكن تعديل كلمة المرور من هنا، يمكن إضافة شاشة خاصة
+              لإعادة التعيين لاحقاً.
             </p>
 
             <div className="ms-modalActions">
-              <button onClick={() => setShowEdit(false)} className="ms-cancelBtn">
+              <button
+                onClick={() => setShowEdit(false)}
+                className="ms-cancelBtn"
+              >
                 إلغاء
               </button>
               <button onClick={handleEditStudent} className="ms-saveBlue">
@@ -396,14 +426,19 @@ export default function ManageStudents() {
       {showDelete && studentToDelete && (
         <Modal onClose={() => setShowDelete(false)} title="تأكيد حذف الطالب">
           <div className="ms-modalBody">
-            <p className="ms-confirmText">هل أنت متأكد أنك تريد حذف حساب الطالب:</p>
+            <p className="ms-confirmText">
+              هل أنت متأكد أنك تريد حذف حساب الطالب:
+            </p>
             <p className="ms-dangerName">
               {studentToDelete.name} ({studentToDelete.email})
             </p>
             <p className="ms-warning">هذا الإجراء لا يمكن التراجع عنه.</p>
 
             <div className="ms-modalActions">
-              <button onClick={() => setShowDelete(false)} className="ms-cancelBtn">
+              <button
+                onClick={() => setShowDelete(false)}
+                className="ms-cancelBtn"
+              >
                 إلغاء
               </button>
               <button onClick={handleDeleteStudent} className="ms-saveRed">

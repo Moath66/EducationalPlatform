@@ -19,6 +19,8 @@ router.get("/pending", protect, adminOnly, getPendingUsers);
 // ✔ موافقة
 router.put("/approve/:id", protect, adminOnly, approveUser);
 
+router.post("/create-teacher", protect, adminOnly, createTeacher);
+
 // ✔ رفض / حذف
 router.delete("/reject/:id", protect, adminOnly, rejectUser);
 

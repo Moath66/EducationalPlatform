@@ -76,3 +76,36 @@ exports.rejectUser = async (req, res) => {
     res.status(500).json({ message: "خطأ أثناء الرفض" });
   }
 };
+
+exports.createTeacher = async (req, res) => {
+  try {
+    const { name, email, phone, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res
+        .status(400)
+        .json({ message: "الاسم والبريد وكلمة المرور مطلوبة" });
+    }
+
+    const exists = await User.findOne({ email });
+    if (exists) return res.status(400).json({ message: "البريد مسجّل مسبقًا" });
+
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const teacher = await User.create({
+      name,
+      email,
+      phone,
+      password: hashedPassword,
+      role: "teacher", // ✅ معلم
+      isApproved: true, // ✅ الأدمن أضافه مباشرة (يدخل النظام)
+    });
+
+    res.status(201).json({
+      message: "تم إنشاء حساب المعلّم بنجاح",
+      teacher: { ...teacher.toObject(), password: undefined },
+    });
+  } catch (err) {
+    res.status(500).json({ message: "خطأ أثناء إنشاء حساب المعلّم" });
+  }
+};
