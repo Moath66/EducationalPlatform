@@ -1,0 +1,374 @@
+/* ====== Header ====== */
+.mt-head {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+@media (min-width: 640px) {
+  .mt-head {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.mt-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: rgb(30 41 59); /* slate-800 */
+  margin: 0;
+}
+
+.mt-subtitle {
+  font-size: 14px;
+  color: rgb(100 116 139); /* slate-500 */
+  margin-top: 4px;
+  margin-bottom: 0;
+}
+
+.mt-addBtn {
+  background: rgb(5 150 105); /* emerald-600 */
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+.mt-addBtn:hover {
+  background: rgb(4 120 87); /* emerald-700 */
+}
+
+/* ====== Filters ====== */
+.mt-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+@media (min-width: 768px) {
+  .mt-filters {
+    flex-direction: row;
+  }
+}
+
+.mt-searchInput {
+  flex: 1;
+  border: 1px solid rgb(203 213 225); /* slate-300 */
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 14px;
+  outline: none;
+}
+.mt-searchInput:focus {
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.6); /* emerald-500 ring */
+}
+
+.mt-select {
+  width: 100%;
+  border: 1px solid rgb(203 213 225);
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 14px;
+  outline: none;
+  background: #fff;
+}
+
+@media (min-width: 768px) {
+  .mt-select {
+    width: 192px; /* w-48 */
+  }
+}
+
+.mt-select:focus {
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.6);
+}
+
+/* ====== Table Card ====== */
+.mt-card {
+  background: #fff;
+  border-radius: 16px; /* rounded-xl */
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgb(226 232 240); /* slate-200 */
+  overflow: hidden;
+}
+
+.mt-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: right;
+}
+
+.mt-thead {
+  background: rgb(241 245 249); /* slate-100 */
+  color: rgb(51 65 85); /* slate-700 */
+}
+
+.mt-th {
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.mt-tr {
+  border-bottom: 1px solid rgb(226 232 240);
+}
+.mt-tr:hover {
+  background: rgb(248 250 252); /* slate-50 */
+}
+
+.mt-td {
+  padding: 12px;
+  font-size: 14px;
+}
+
+/* Empty states */
+.mt-empty {
+  padding: 24px;
+  text-align: center;
+  color: rgb(100 116 139); /* slate-500 */
+  font-size: 14px;
+}
+.mt-emptyMuted {
+  color: rgb(148 163 184); /* slate-400 */
+}
+
+/* Status */
+.mt-statusApproved {
+  color: rgb(22 163 74); /* green-600 */
+  font-weight: 600;
+}
+.mt-statusPending {
+  color: rgb(220 38 38); /* red-600 */
+  font-weight: 600;
+}
+
+/* Actions */
+.mt-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.mt-btnEdit,
+.mt-btnDelete {
+  padding: 4px 12px;
+  font-size: 12px;
+  color: #fff;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+.mt-btnEdit {
+  background: rgb(59 130 246); /* blue-500 */
+}
+.mt-btnEdit:hover {
+  background: rgb(37 99 235); /* blue-600 */
+}
+
+.mt-btnDelete {
+  background: rgb(239 68 68); /* red-500 */
+}
+.mt-btnDelete:hover {
+  background: rgb(220 38 38); /* red-600 */
+}
+
+/* ====== Pagination ====== */
+.mt-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-top: 1px solid rgb(226 232 240);
+  font-size: 12px;
+  color: rgb(71 85 105); /* slate-600 */
+}
+
+.mt-paginationBtns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.mt-pageBtn {
+  padding: 4px 12px;
+  border-radius: 8px;
+  border: 1px solid rgb(203 213 225); /* slate-300 */
+  background: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+.mt-pageBtn:hover {
+  background: rgb(241 245 249); /* slate-100 */
+}
+
+.mt-pageBtnDisabled {
+  color: rgb(148 163 184); /* slate-400 */
+  border-color: rgb(226 232 240); /* slate-200 */
+  cursor: not-allowed;
+}
+.mt-pageBtnDisabled:hover {
+  background: #fff;
+}
+
+/* ====== Modal ====== */
+.mt-modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4); /* bg-black/40 */
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.mt-modalCard {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+  width: 100%;
+  max-width: 448px; /* max-w-md */
+  margin: 0 16px;
+  overflow: hidden;
+}
+
+.mt-modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgb(226 232 240);
+}
+
+.mt-modalTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgb(30 41 59);
+  margin: 0;
+}
+
+.mt-modalClose {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  color: rgb(148 163 184); /* slate-400 */
+  line-height: 1;
+}
+.mt-modalClose:hover {
+  color: rgb(71 85 105); /* slate-600 */
+}
+
+.mt-modalContent {
+  padding: 16px;
+}
+
+/* Modal body / actions */
+.mt-modalBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px; /* space-y-3 */
+  font-size: 14px;
+}
+
+.mt-modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+/* Buttons in modal */
+.mt-cancelBtn {
+  padding: 4px 12px;
+  border-radius: 8px;
+  border: 1px solid rgb(203 213 225);
+  background: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.mt-saveGreen,
+.mt-saveBlue,
+.mt-saveRed {
+  padding: 4px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: #fff;
+}
+
+.mt-saveGreen {
+  background: rgb(5 150 105); /* emerald-600 */
+}
+.mt-saveGreen:hover {
+  background: rgb(4 120 87); /* emerald-700 */
+}
+
+.mt-saveBlue {
+  background: rgb(37 99 235); /* blue-600 */
+}
+.mt-saveBlue:hover {
+  background: rgb(29 78 216); /* blue-700 */
+}
+
+.mt-saveRed {
+  background: rgb(220 38 38); /* red-600 */
+}
+.mt-saveRed:hover {
+  background: rgb(185 28 28); /* red-700 */
+}
+
+/* Text helpers inside modals */
+.mt-note {
+  font-size: 12px;
+  color: rgb(148 163 184); /* slate-400 */
+  margin: 0;
+}
+
+.mt-confirmText {
+  color: rgb(51 65 85); /* slate-700 */
+  margin: 0;
+}
+
+.mt-dangerName {
+  font-weight: 600;
+  color: rgb(220 38 38); /* red-600 */
+  margin: 0;
+}
+
+.mt-warning {
+  font-size: 12px;
+  color: rgb(100 116 139); /* slate-500 */
+  margin: 0;
+}
+
+/* ====== InputField ====== */
+.mt-field {
+  display: block;
+  font-size: 14px;
+}
+
+.mt-fieldLabel {
+  display: block;
+  margin-bottom: 4px;
+  color: rgb(51 65 85); /* slate-700 */
+}
+
+.mt-fieldInput {
+  width: 100%;
+  border: 1px solid rgb(203 213 225); /* slate-300 */
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 14px;
+  outline: none;
+}
+
+.mt-fieldInput:focus {
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.6);
+}

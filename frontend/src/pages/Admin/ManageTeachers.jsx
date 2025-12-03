@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import AdminLayout from "../../layouts/AdminLayout";
 import apiClient from "../../../api/apiClient";
+import "../../styles/ManageTeachers.css"; // ← ملف التنسيق الجديد
 
 export default function ManageTeachers() {
   const [teachers, setTeachers] = useState([]);
@@ -170,35 +171,32 @@ export default function ManageTeachers() {
   return (
     <AdminLayout>
       {/* العنوان + زر إضافة معلّم */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-6">
+      <div className="mt-head">
         <div>
-          <h2 className="text-2xl font-bold text-slate-800">إدارة المعلّمين</h2>
-          <p className="text-sm text-slate-500 mt-1">
+          <h2 className="mt-title">إدارة المعلّمين</h2>
+          <p className="mt-subtitle">
             يمكنك هنا إدارة حسابات المعلّمين: الإضافة، التعديل، الحذف، وتفعيل
             الحسابات.
           </p>
         </div>
 
-        <button
-          onClick={() => setShowAdd(true)}
-          className="bg-emerald-600 text-white px-4 py-2 rounded-lg hover:bg-emerald-700 text-sm"
-        >
+        <button onClick={() => setShowAdd(true)} className="mt-addBtn">
           + إضافة معلّم
         </button>
       </div>
 
       {/* شريط البحث + الفلترة */}
-      <div className="flex flex-col md:flex-row gap-3 mb-4">
+      <div className="mt-filters">
         <input
           type="text"
           placeholder="ابحث بالاسم، البريد، أو رقم الجوال..."
-          className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+          className="mt-searchInput"
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
 
         <select
-          className="w-full md:w-48 border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500 bg-white"
+          className="mt-select"
           value={statusFilter}
           onChange={(e) => setStatusFilter(e.target.value)}
         >
@@ -209,22 +207,22 @@ export default function ManageTeachers() {
       </div>
 
       {/* جدول المعلّمين */}
-      <div className="bg-white rounded-xl shadow border border-slate-200 overflow-hidden">
-        <table className="w-full text-right">
-          <thead className="bg-slate-100 text-slate-700">
+      <div className="mt-card">
+        <table className="mt-table">
+          <thead className="mt-thead">
             <tr>
-              <th className="p-3 text-sm">الاسم</th>
-              <th className="p-3 text-sm">البريد</th>
-              <th className="p-3 text-sm">رقم الجوال</th>
-              <th className="p-3 text-sm">الحالة</th>
-              <th className="p-3 text-sm">إجراءات</th>
+              <th className="mt-th">الاسم</th>
+              <th className="mt-th">البريد</th>
+              <th className="mt-th">رقم الجوال</th>
+              <th className="mt-th">الحالة</th>
+              <th className="mt-th">إجراءات</th>
             </tr>
           </thead>
 
           <tbody>
             {loading && (
               <tr>
-                <td colSpan="5" className="p-6 text-center text-slate-500">
+                <td colSpan="5" className="mt-empty">
                   🔄 جاري تحميل بيانات المعلّمين...
                 </td>
               </tr>
@@ -232,42 +230,38 @@ export default function ManageTeachers() {
 
             {!loading && pageTeachers.length === 0 && (
               <tr>
-                <td colSpan="5" className="p-6 text-center text-slate-400">
+                <td colSpan="5" className="mt-empty mt-emptyMuted">
                   لا يوجد معلّمين حسب معايير البحث الحالية.
                 </td>
               </tr>
             )}
 
             {pageTeachers.map((t) => (
-              <tr key={t._id} className="border-b hover:bg-slate-50">
-                <td className="p-3 text-sm">{t.name}</td>
-                <td className="p-3 text-sm">{t.email}</td>
-                <td className="p-3 text-sm">{t.phone}</td>
+              <tr key={t._id} className="mt-tr">
+                <td className="mt-td">{t.name}</td>
+                <td className="mt-td">{t.email}</td>
+                <td className="mt-td">{t.phone}</td>
 
-                <td className="p-3 text-sm">
+                <td className="mt-td">
                   {t.isApproved ? (
-                    <span className="text-green-600 font-semibold">
-                      ✔ مفعّل
-                    </span>
+                    <span className="mt-statusApproved">✔ مفعّل</span>
                   ) : (
-                    <span className="text-red-600 font-semibold">
-                      ✖ غير مفعّل
-                    </span>
+                    <span className="mt-statusPending">✖ غير مفعّل</span>
                   )}
                 </td>
 
-                <td className="p-3">
-                  <div className="flex flex-wrap gap-2 justify-end">
+                <td className="mt-td">
+                  <div className="mt-actions">
                     <button
                       onClick={() => openEditModal(t)}
-                      className="px-3 py-1 text-xs bg-blue-500 text-white rounded hover:bg-blue-600"
+                      className="mt-btnEdit"
                     >
                       تعديل
                     </button>
 
                     <button
                       onClick={() => openDeleteModal(t)}
-                      className="px-3 py-1 text-xs bg-red-500 text-white rounded hover:bg-red-600"
+                      className="mt-btnDelete"
                     >
                       حذف
                     </button>
@@ -280,20 +274,18 @@ export default function ManageTeachers() {
 
         {/* Pagination */}
         {!loading && filteredTeachers.length > 0 && (
-          <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 text-xs text-slate-600">
+          <div className="mt-pagination">
             <span>
               صفحة {currentPageSafe} من {totalPages} — عدد المعلّمين:{" "}
               {filteredTeachers.length}
             </span>
 
-            <div className="flex items-center gap-2">
+            <div className="mt-paginationBtns">
               <button
                 disabled={currentPageSafe === 1}
                 onClick={() => setCurrentPage((p) => (p > 1 ? p - 1 : p))}
-                className={`px-3 py-1 rounded border text-xs ${
-                  currentPageSafe === 1
-                    ? "text-slate-400 border-slate-200 cursor-not-allowed"
-                    : "border-slate-300 hover:bg-slate-100"
+                className={`mt-pageBtn ${
+                  currentPageSafe === 1 ? "mt-pageBtnDisabled" : ""
                 }`}
               >
                 السابق
@@ -304,10 +296,8 @@ export default function ManageTeachers() {
                 onClick={() =>
                   setCurrentPage((p) => (p < totalPages ? p + 1 : p))
                 }
-                className={`px-3 py-1 rounded border text-xs ${
-                  currentPageSafe === totalPages
-                    ? "text-slate-400 border-slate-200 cursor-not-allowed"
-                    : "border-slate-300 hover:bg-slate-100"
+                className={`mt-pageBtn ${
+                  currentPageSafe === totalPages ? "mt-pageBtnDisabled" : ""
                 }`}
               >
                 التالي
@@ -320,7 +310,7 @@ export default function ManageTeachers() {
       {/* ================== مودال إضافة معلّم ================== */}
       {showAdd && (
         <Modal onClose={() => setShowAdd(false)} title="إضافة معلّم جديد">
-          <div className="space-y-3 text-sm">
+          <div className="mt-modalBody">
             <InputField
               label="الاسم الكامل"
               value={addForm.name}
@@ -354,17 +344,14 @@ export default function ManageTeachers() {
               type="password"
             />
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="mt-modalActions">
               <button
                 onClick={() => setShowAdd(false)}
-                className="px-3 py-1 rounded border border-slate-300 text-xs"
+                className="mt-cancelBtn"
               >
                 إلغاء
               </button>
-              <button
-                onClick={handleAddTeacher}
-                className="px-4 py-1 rounded bg-emerald-600 text-white text-xs hover:bg-emerald-700"
-              >
+              <button onClick={handleAddTeacher} className="mt-saveGreen">
                 حفظ
               </button>
             </div>
@@ -375,7 +362,7 @@ export default function ManageTeachers() {
       {/* ================== مودال تعديل معلّم ================== */}
       {showEdit && teacherToEdit && (
         <Modal onClose={() => setShowEdit(false)} title="تعديل بيانات المعلّم">
-          <div className="space-y-3 text-sm">
+          <div className="mt-modalBody">
             <InputField
               label="الاسم الكامل"
               value={editForm.name}
@@ -399,22 +386,19 @@ export default function ManageTeachers() {
               }
             />
 
-            <p className="text-xs text-slate-400">
+            <p className="mt-note">
               ملاحظة: لا يمكن تعديل كلمة المرور من هنا، يمكن إضافة شاشة خاصة
               لإعادة التعيين لاحقاً.
             </p>
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="mt-modalActions">
               <button
                 onClick={() => setShowEdit(false)}
-                className="px-3 py-1 rounded border border-slate-300 text-xs"
+                className="mt-cancelBtn"
               >
                 إلغاء
               </button>
-              <button
-                onClick={handleEditTeacher}
-                className="px-4 py-1 rounded bg-blue-600 text-white text-xs hover:bg-blue-700"
-              >
+              <button onClick={handleEditTeacher} className="mt-saveBlue">
                 حفظ التعديل
               </button>
             </div>
@@ -425,28 +409,23 @@ export default function ManageTeachers() {
       {/* ================== مودال تأكيد الحذف ================== */}
       {showDelete && teacherToDelete && (
         <Modal onClose={() => setShowDelete(false)} title="تأكيد حذف المعلّم">
-          <div className="space-y-3 text-sm">
-            <p className="text-slate-700">
+          <div className="mt-modalBody">
+            <p className="mt-confirmText">
               هل أنت متأكد أنك تريد حذف حساب المعلّم:
             </p>
-            <p className="font-semibold text-red-600">
+            <p className="mt-dangerName">
               {teacherToDelete.name} ({teacherToDelete.email})
             </p>
-            <p className="text-xs text-slate-500">
-              هذا الإجراء لا يمكن التراجع عنه.
-            </p>
+            <p className="mt-warning">هذا الإجراء لا يمكن التراجع عنه.</p>
 
-            <div className="flex justify-end gap-2 pt-2">
+            <div className="mt-modalActions">
               <button
                 onClick={() => setShowDelete(false)}
-                className="px-3 py-1 rounded border border-slate-300 text-xs"
+                className="mt-cancelBtn"
               >
                 إلغاء
               </button>
-              <button
-                onClick={handleDeleteTeacher}
-                className="px-4 py-1 rounded bg-red-600 text-white text-xs hover:bg-red-700"
-              >
+              <button onClick={handleDeleteTeacher} className="mt-saveRed">
                 حذف
               </button>
             </div>
@@ -461,18 +440,15 @@ export default function ManageTeachers() {
 
 function Modal({ children, title, onClose }) {
   return (
-    <div className="fixed inset-0 bg-black/40 flex items-center justify-center z-50">
-      <div className="bg-white rounded-xl shadow-lg w-full max-w-md mx-4">
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-200">
-          <h3 className="text-sm font-semibold text-slate-800">{title}</h3>
-          <button
-            onClick={onClose}
-            className="text-slate-400 hover:text-slate-600 text-lg"
-          >
+    <div className="mt-modalOverlay">
+      <div className="mt-modalCard">
+        <div className="mt-modalHeader">
+          <h3 className="mt-modalTitle">{title}</h3>
+          <button onClick={onClose} className="mt-modalClose">
             ×
           </button>
         </div>
-        <div className="p-4">{children}</div>
+        <div className="mt-modalContent">{children}</div>
       </div>
     </div>
   );
@@ -482,12 +458,9 @@ function Modal({ children, title, onClose }) {
 
 function InputField({ label, ...props }) {
   return (
-    <label className="block text-sm">
-      <span className="block mb-1 text-slate-700">{label}</span>
-      <input
-        {...props}
-        className="w-full border border-slate-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
-      />
+    <label className="mt-field">
+      <span className="mt-fieldLabel">{label}</span>
+      <input {...props} className="mt-fieldInput" />
     </label>
   );
 }
