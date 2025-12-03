@@ -2,9 +2,18 @@ const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 
 // Get All Users (Admin only)
+// Get All Users (Admin only)
 exports.getAllUsers = async (req, res) => {
   try {
-    const users = await User.find().select("-password");
+    const { role, approved } = req.query;
+
+    const filter = {};
+    if (role) filter.role = role;
+
+    if (approved === "true") filter.isApproved = true;
+    if (approved === "false") filter.isApproved = false;
+
+    const users = await User.find(filter).select("-password");
     res.json(users);
   } catch (err) {
     res.status(500).json({ message: "خطأ أثناء جلب المستخدمين" });
