@@ -65,7 +65,7 @@ export default function ManageStudents() {
         return;
       }
 
-      await apiClient.post("/api/users/create-teacher", addForm);
+      await apiClient.post("/api/auth/register", addForm);
 
       alert("✔ تم إضافة الطالب بنجاح");
       setShowAdd(false);

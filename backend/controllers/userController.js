@@ -98,7 +98,7 @@ exports.createTeacher = async (req, res) => {
       phone,
       password: hashedPassword,
       role: "teacher", // ✅ معلم
-      isApproved: true, // ✅ الأدمن أضافه مباشرة (يدخل النظام)
+      isApproved: false, // ✅ الأدمن أضافه مباشرة (يدخل النظام)
     });
 
     res.status(201).json({
