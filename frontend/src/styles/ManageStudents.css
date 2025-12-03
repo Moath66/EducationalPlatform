@@ -1,0 +1,375 @@
+/* ====== Header ====== */
+.ms-head {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+}
+
+@media (min-width: 640px) {
+  .ms-head {
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+  }
+}
+
+.ms-title {
+  font-size: 24px;
+  font-weight: 700;
+  color: rgb(30 41 59);
+  margin: 0;
+}
+
+.ms-subtitle {
+  font-size: 14px;
+  color: rgb(100 116 139);
+  margin-top: 4px;
+  margin-bottom: 0;
+}
+
+.ms-addBtn {
+  background: rgb(5 150 105);
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 12px;
+  border: none;
+  cursor: pointer;
+  font-size: 14px;
+}
+.ms-addBtn:hover {
+  background: rgb(4 120 87);
+}
+
+/* ====== Filters ====== */
+.ms-filters {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+@media (min-width: 768px) {
+  .ms-filters {
+    flex-direction: row;
+  }
+}
+
+.ms-searchInput {
+  flex: 1;
+  border: 1px solid rgb(203 213 225);
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 14px;
+  outline: none;
+}
+.ms-searchInput:focus {
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.6);
+}
+
+.ms-select {
+  width: 100%;
+  border: 1px solid rgb(203 213 225);
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 14px;
+  outline: none;
+  background: #fff;
+}
+
+@media (min-width: 768px) {
+  .ms-select {
+    width: 192px;
+  }
+}
+
+.ms-select:focus {
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.6);
+}
+
+/* ====== Table Card ====== */
+.ms-card {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+  border: 1px solid rgb(226 232 240);
+  overflow: hidden;
+}
+
+.ms-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: right;
+}
+
+.ms-thead {
+  background: rgb(241 245 249);
+  color: rgb(51 65 85);
+}
+
+.ms-th {
+  padding: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.ms-tr {
+  border-bottom: 1px solid rgb(226 232 240);
+}
+.ms-tr:hover {
+  background: rgb(248 250 252);
+}
+
+.ms-td {
+  padding: 12px;
+  font-size: 14px;
+}
+
+/* Empty states */
+.ms-empty {
+  padding: 24px;
+  text-align: center;
+  color: rgb(100 116 139);
+  font-size: 14px;
+}
+.ms-emptyMuted {
+  color: rgb(148 163 184);
+}
+
+/* Status */
+.ms-statusApproved {
+  color: rgb(22 163 74);
+  font-weight: 600;
+}
+.ms-statusPending {
+  color: rgb(220 38 38);
+  font-weight: 600;
+}
+
+/* Actions */
+.ms-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.ms-btnEdit,
+.ms-btnDelete {
+  padding: 4px 12px;
+  font-size: 12px;
+  color: #fff;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+}
+.ms-btnEdit {
+  background: rgb(59 130 246);
+}
+.ms-btnEdit:hover {
+  background: rgb(37 99 235);
+}
+
+.ms-btnDelete {
+  background: rgb(239 68 68);
+}
+.ms-btnDelete:hover {
+  background: rgb(220 38 38);
+}
+
+/* ====== Pagination ====== */
+.ms-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-top: 1px solid rgb(226 232 240);
+  font-size: 12px;
+  color: rgb(71 85 105);
+}
+
+.ms-paginationBtns {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ms-pageBtn {
+  padding: 4px 12px;
+  border-radius: 8px;
+  border: 1px solid rgb(203 213 225);
+  background: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+.ms-pageBtn:hover {
+  background: rgb(241 245 249);
+}
+
+.ms-pageBtnDisabled {
+  color: rgb(148 163 184);
+  border-color: rgb(226 232 240);
+  cursor: not-allowed;
+}
+.ms-pageBtnDisabled:hover {
+  background: #fff;
+}
+
+/* ====== Modal ====== */
+.ms-modalOverlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.4);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 50;
+}
+
+.ms-modalCard {
+  background: #fff;
+  border-radius: 16px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+  width: 100%;
+  max-width: 448px;
+  margin: 0 16px;
+  overflow: hidden;
+}
+
+.ms-modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid rgb(226 232 240);
+}
+
+.ms-modalTitle {
+  font-size: 14px;
+  font-weight: 600;
+  color: rgb(30 41 59);
+  margin: 0;
+}
+
+.ms-modalClose {
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  font-size: 20px;
+  color: rgb(148 163 184);
+  line-height: 1;
+}
+.ms-modalClose:hover {
+  color: rgb(71 85 105);
+}
+
+.ms-modalContent {
+  padding: 16px;
+}
+
+/* Modal body / actions */
+.ms-modalBody {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  font-size: 14px;
+}
+
+.ms-modalActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  padding-top: 8px;
+}
+
+/* Buttons in modal */
+.ms-cancelBtn {
+  padding: 4px 12px;
+  border-radius: 8px;
+  border: 1px solid rgb(203 213 225);
+  background: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.ms-saveGreen,
+.ms-saveBlue,
+.ms-saveRed {
+  padding: 4px 16px;
+  border-radius: 8px;
+  border: none;
+  cursor: pointer;
+  font-size: 12px;
+  color: #fff;
+}
+
+.ms-saveGreen {
+  background: rgb(5 150 105);
+}
+.ms-saveGreen:hover {
+  background: rgb(4 120 87);
+}
+
+.ms-saveBlue {
+  background: rgb(37 99 235);
+}
+.ms-saveBlue:hover {
+  background: rgb(29 78 216);
+}
+
+.ms-saveRed {
+  background: rgb(220 38 38);
+}
+.ms-saveRed:hover {
+  background: rgb(185 28 28);
+}
+
+/* Text helpers inside modals */
+.ms-note {
+  font-size: 12px;
+  color: rgb(148 163 184);
+  margin: 0;
+}
+
+.ms-confirmText {
+  color: rgb(51 65 85);
+  margin: 0;
+}
+
+.ms-dangerName {
+  font-weight: 600;
+  color: rgb(220 38 38);
+  margin: 0;
+}
+
+.ms-warning {
+  font-size: 12px;
+  color: rgb(100 116 139);
+  margin: 0;
+}
+
+/* ====== InputField ====== */
+.ms-field {
+  display: block;
+  font-size: 14px;
+}
+
+.ms-fieldLabel {
+  display: block;
+  margin-bottom: 4px;
+  color: rgb(51 65 85);
+}
+
+.ms-fieldInput {
+  width: 100%;
+  border: 1px solid rgb(203 213 225);
+  border-radius: 12px;
+  padding: 8px 12px;
+  font-size: 14px;
+  outline: none;
+}
+
+.ms-fieldInput:focus {
+  box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.6);
+}
