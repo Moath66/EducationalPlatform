@@ -57,6 +57,7 @@ export default function ManageTeachers() {
   }, []);
 
   // إضافة معلّم جديد
+  // إضافة معلّم جديد
   const handleAddTeacher = async () => {
     try {
       if (!addForm.name || !addForm.email || !addForm.password) {
@@ -64,10 +65,7 @@ export default function ManageTeachers() {
         return;
       }
 
-      await apiClient.post("/api/auth/register", {
-        ...addForm,
-        role: "teacher",
-      });
+      await apiClient.post("/api/users/create-teacher", addForm); // ✅ هنا
 
       alert("✔ تم إضافة المعلّم بنجاح");
       setShowAdd(false);

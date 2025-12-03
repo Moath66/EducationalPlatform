@@ -21,7 +21,7 @@ export default function ManagePendingStudents() {
   const approve = async (id) => {
     try {
       await apiClient.put(`/api/users/approve/${id}`);
-      alert("✔ تمت الموافقة على الطالب");
+      alert("✔ تمت الموافقة على المستخدم");
       fetchPending();
     } catch (err) {
       console.log(err);
@@ -34,7 +34,7 @@ export default function ManagePendingStudents() {
 
     try {
       await apiClient.delete(`/api/users/reject/${id}`);
-      alert("🚮 تم رفض الطالب وحذف طلبه");
+      alert("🚮 تم رفض المستخدم وحذف طلبه");
       fetchPending();
     } catch (err) {
       console.log(err);
@@ -59,7 +59,14 @@ export default function ManagePendingStudents() {
                 <p className="font-bold text-lg">{u.name}</p>
                 <p className="text-gray-600 text-sm">{u.email}</p>
                 <p className="text-gray-600 text-sm">الجوال: {u.phone}</p>
-                <p className="text-gray-600 text-sm">الصف: {u.grade}</p>
+
+                <p className="text-gray-600 text-sm">
+                  النوع: {u.role === "teacher" ? "معلّم" : "طالب"}
+                </p>
+
+                {u.role === "student" && (
+                  <p className="text-gray-600 text-sm">الصف: {u.grade}</p>
+                )}
               </div>
 
               <div className="flex gap-3">
