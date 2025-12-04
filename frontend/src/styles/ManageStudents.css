@@ -373,3 +373,7 @@
 .ms-fieldInput:focus {
   box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.6);
 }
+
+.mt-thead th:last-child {
+  text-align: left;
+}
