@@ -33,6 +33,13 @@ app.use("/api/users", userRoutes);
 const attendanceRoutes = require("./routes/attendanceRoutes");
 app.use("/api/attendance", attendanceRoutes);
 
+const studyFileRoutes = require("./routes/studyFileRoutes");
+app.use("/api/study-files", studyFileRoutes);
+
+// Static Files
+
+app.use("/uploads", express.static("uploads"));
+
 // Test
 app.get("/", (req, res) => {
   res.send("API Working ✔");
