@@ -7,7 +7,7 @@ import RequireAdmin from "../middleware/RequireAdmin";
 import AdminDashboard from "../pages/Admin/AdminDashboard";
 import ManageTeachers from "../pages/Admin/ManageTeachers";
 import ManageStudents from "../pages/Admin/ManageStudents";
-import ManagePendingStudents from "../pages/Admin/ManagePendingStudents";
+import ManagePendingUser from "../pages/Admin/ManagePendingUser";
 import StudyPlans from "../pages/Admin/StudyPlans";
 import ClassSessions from "../pages/Admin/ClassSessions";
 import Settings from "../pages/Admin/Settings";
@@ -60,7 +60,7 @@ export default function AppRouter() {
           path="/admin/pending"
           element={
             <RequireAdmin>
-              <ManagePendingStudents />
+              <ManagePendingUser />
             </RequireAdmin>
           }
         />
