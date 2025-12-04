@@ -249,23 +249,20 @@ export default function ManageTeachers() {
                 </td>
 
                 <td className="mt-td">
-                  <div className="mt-actionsCell">
-                    <div className="mt-actionsLabel">إجراءات</div>
+                  <div className="mt-actions">
+                    <button
+                      onClick={() => openEditModal(t)}
+                      className="mt-btnEdit"
+                    >
+                      تعديل
+                    </button>
 
-                    <div className="mt-actions">
-                      <button
-                        onClick={() => openEditModal(t)}
-                        className="mt-btnEdit"
-                      >
-                        تعديل
-                      </button>
-                      <button
-                        onClick={() => openDeleteModal(t)}
-                        className="mt-btnDelete"
-                      >
-                        حذف
-                      </button>
-                    </div>
+                    <button
+                      onClick={() => openDeleteModal(t)}
+                      className="mt-btnDelete"
+                    >
+                      حذف
+                    </button>
                   </div>
                 </td>
               </tr>
