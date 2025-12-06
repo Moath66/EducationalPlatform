@@ -111,7 +111,7 @@ router.post(
  * هنا خليته protect+adminOnly لأنك قلت ادمن يديرها
  * إذا تبغى الطالب يشوفها، خفف الحماية أو اعمل route ثاني.
  */
-router.get("/", protect, adminOnly, async (req, res) => {
+router.get("/", protect, async (req, res) => {
   try {
     const { type, grade } = req.query;
 

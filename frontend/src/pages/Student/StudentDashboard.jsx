@@ -33,13 +33,27 @@ export default function StudentDashboard() {
         </div>
       </div>
 
-      {/* 🔥 Attendance Button */}
-      <div className="flex justify-end mb-6">
+      {/* 🔥 Quick Actions */}
+      <div className="flex flex-wrap justify-end gap-3 mb-6">
         <button
           onClick={() => (window.location.href = "/student/attendance")}
           className="px-6 py-3 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition text-lg font-semibold"
         >
           📅 عرض الحضور
+        </button>
+
+        <button
+          onClick={() => (window.location.href = "/student/schedule")}
+          className="px-6 py-3 bg-emerald-600 text-white rounded-lg shadow hover:bg-emerald-700 transition text-lg font-semibold"
+        >
+          🗓️ الجدول الدراسي
+        </button>
+
+        <button
+          onClick={() => (window.location.href = "/student/study-plans")}
+          className="px-6 py-3 bg-slate-700 text-white rounded-lg shadow hover:bg-slate-800 transition text-lg font-semibold"
+        >
+          📄 الخطة الدراسية
         </button>
       </div>
 

@@ -9,6 +9,11 @@ export default function TeacherDashboard() {
     setTeacher(savedUser);
   }, []);
 
+  const logout = () => {
+    localStorage.clear();
+    window.location.href = "/login";
+  };
+
   return (
     <div className="p-6 text-right min-h-screen bg-gray-100" dir="rtl">
       {/* Header */}
@@ -19,16 +24,13 @@ export default function TeacherDashboard() {
 
         <button
           className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm"
-          onClick={() => {
-            localStorage.clear();
-            window.location.href = "/login";
-          }}
+          onClick={logout}
         >
           تسجيل الخروج
         </button>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards (Placeholder) */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
         <div className="p-4 bg-white rounded-xl shadow">
           <p className="text-gray-500 text-sm">عدد كورساتي</p>
@@ -52,7 +54,8 @@ export default function TeacherDashboard() {
       </div>
 
       {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+        {/* Sessions */}
         <div className="bg-white p-4 rounded-xl shadow flex flex-col gap-3">
           <h2 className="text-xl font-bold mb-1">الجلسات</h2>
           <p className="text-gray-600 text-sm">
@@ -74,6 +77,7 @@ export default function TeacherDashboard() {
           </div>
         </div>
 
+        {/* Lessons */}
         <div className="bg-white p-4 rounded-xl shadow flex flex-col gap-3">
           <h2 className="text-xl font-bold mb-1">الدروس</h2>
           <p className="text-gray-600 text-sm">
@@ -89,6 +93,7 @@ export default function TeacherDashboard() {
           </div>
         </div>
 
+        {/* Assignments & Students */}
         <div className="bg-white p-4 rounded-xl shadow flex flex-col gap-3">
           <h2 className="text-xl font-bold mb-1">الواجبات والطلاب</h2>
           <p className="text-gray-600 text-sm">
@@ -101,6 +106,7 @@ export default function TeacherDashboard() {
             >
               إدارة الواجبات
             </button>
+
             <button
               onClick={() => (window.location.href = "/teacher/students")}
               className="px-4 py-2 bg-slate-700 text-white rounded-lg text-sm"
@@ -109,9 +115,25 @@ export default function TeacherDashboard() {
             </button>
           </div>
         </div>
+
+        {/* Schedule & Plans (NEW) */}
+        <div className="bg-white p-4 rounded-xl shadow flex flex-col gap-3">
+          <h2 className="text-xl font-bold mb-1">الجدول / الخطة</h2>
+          <p className="text-gray-600 text-sm">
+            عرض الجداول والخطط الدراسية المرفوعة من الإدارة.
+          </p>
+          <div className="flex gap-3 justify-end">
+            <button
+              onClick={() => (window.location.href = "/teacher/schedule")}
+              className="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm"
+            >
+              📄 عرض الجدول
+            </button>
+          </div>
+        </div>
       </div>
 
-      {/* Upcoming Sessions */}
+      {/* Upcoming Sessions (Placeholder) */}
       <div className="bg-white p-5 rounded-xl shadow mb-6">
         <h2 className="text-xl font-bold mb-3 text-gray-800">
           الجلسات القادمة 🎥
@@ -154,10 +176,8 @@ export default function TeacherDashboard() {
         </div>
       </div>
 
-      {/* Simple bottom notice */}
       <p className="text-xs text-gray-400 text-center mt-4">
-        *جميع البيانات في هذه الصفحة تجريبية (Placeholder) وسيتم ربطها
-        بالباك-إند لاحقًا.
+        *هذه بيانات تجريبية وسيتم ربطها بالباك-إند لاحقًا.
       </p>
     </div>
   );
