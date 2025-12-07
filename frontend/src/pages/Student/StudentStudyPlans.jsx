@@ -63,7 +63,6 @@ export default function StudentStudyPlans() {
       {/* Header */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
         <div>
-          <h1 className="text-3xl font-bold">الخطط والجداول الدراسية 📚</h1>
           <h1 className="text-3xl font-bold">الخطة الدراسية 📚</h1>
           <p className="text-sm text-gray-600 mt-1">
             هنا تجد ملفات الخطة الدراسية الخاصة بصفّك (وأيضاً الملفات العامة).
