@@ -111,6 +111,13 @@ router.post(
  * هنا خليته protect+adminOnly لأنك قلت ادمن يديرها
  * إذا تبغى الطالب يشوفها، خفف الحماية أو اعمل route ثاني.
  */
+const {
+  protect,
+  adminOnly,
+  teacherOnly,
+  studentOnly,
+} = require("../middleware/authMiddleware");
+
 router.get("/", protect, async (req, res) => {
   try {
     const { type, grade } = req.query;
