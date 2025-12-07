@@ -16,7 +16,7 @@ export default function StudyPlans() {
   const [form, setForm] = useState({
     title: "",
     type: "plan", // plan | schedule
-    grade: "",
+    grade: "", // optional
     description: "",
     file: null,
   });
@@ -29,7 +29,7 @@ export default function StudyPlans() {
     try {
       setLoading(true);
       const res = await apiClient.get("/api/study-files");
-      setItems(res.data || []);
+      setItems(Array.isArray(res.data) ? res.data : []);
     } catch (e) {
       console.log(e);
       alert("❌ فشل في تحميل الخطط والجداول");
@@ -44,8 +44,10 @@ export default function StudyPlans() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
+
     return items.filter((it) => {
       const matchesType = typeFilter === "all" ? true : it.type === typeFilter;
+
       const matchesGrade =
         gradeFilter === "all" ? true : String(it.grade) === String(gradeFilter);
 
@@ -53,7 +55,7 @@ export default function StudyPlans() {
         !q ||
         it.title?.toLowerCase().includes(q) ||
         it.description?.toLowerCase().includes(q) ||
-        it.originalName?.toLowerCase().includes(q);
+        it.fileName?.toLowerCase().includes(q);
 
       return matchesType && matchesGrade && matchesSearch;
     });
@@ -74,7 +76,7 @@ export default function StudyPlans() {
       f.name.toLowerCase().endsWith(".pdf");
 
     if (!allowed) {
-      alert("⚠ مسموح فقط PDF أو صور (PNG/JPG)");
+      alert("⚠ مسموح فقط PDF أو صور (PNG/JPG/WEBP)");
       e.target.value = "";
       return;
     }
@@ -90,8 +92,9 @@ export default function StudyPlans() {
 
   const handleUpload = async () => {
     try {
-      if (!form.title || !form.type || !form.grade || !form.file) {
-        alert("⚠ اكتب العنوان، اختر النوع، الصف/المرحلة، وارفع ملف.");
+      // ✅ grade صار اختياري
+      if (!form.title || !form.type || !form.file) {
+        alert("⚠ اكتب العنوان، اختر النوع، وارفع ملف.");
         return;
       }
 
@@ -100,8 +103,8 @@ export default function StudyPlans() {
       const fd = new FormData();
       fd.append("title", form.title);
       fd.append("type", form.type);
-      fd.append("grade", form.grade);
-      fd.append("description", form.description || "");
+      if (form.grade) fd.append("grade", form.grade); // ✅ اختياري
+      if (form.description) fd.append("description", form.description);
       fd.append("file", form.file);
 
       await apiClient.post("/api/study-files", fd, {
@@ -188,7 +191,7 @@ export default function StudyPlans() {
             </label>
 
             <label className="sp-field">
-              <span className="sp-label">الصف / المرحلة</span>
+              <span className="sp-label">الصف / المرحلة (اختياري)</span>
               <input
                 className="sp-input"
                 value={form.grade}
@@ -246,7 +249,7 @@ export default function StudyPlans() {
       <div className="sp-filters">
         <input
           className="sp-search"
-          placeholder="ابحث في العنوان أو الوصف..."
+          placeholder="ابحث في العنوان أو الوصف أو اسم الملف..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -310,18 +313,21 @@ export default function StudyPlans() {
                         <div className="sp-desc">{it.description}</div>
                       ) : null}
                     </td>
+
                     <td>{typeLabel(it.type)}</td>
                     <td>{it.grade || "-"}</td>
+
                     <td className="sp-fileCell">
                       <a
                         className="sp-fileLink"
-                        href={it.url}
+                        href={it.fileUrl}
                         target="_blank"
                         rel="noreferrer"
                       >
-                        {it.originalName || "تحميل"}
+                        {it.fileName || "تحميل"}
                       </a>
                     </td>
+
                     <td className="sp-actionsCell">
                       <div className="sp-actions">
                         <button
@@ -363,12 +369,16 @@ export default function StudyPlans() {
             </div>
 
             <div className="sp-modalBody">
-              {previewItem.mimetype?.startsWith("image/") ? (
-                <img className="sp-previewImg" src={previewItem.url} alt="" />
+              {previewItem.fileType?.startsWith("image/") ? (
+                <img
+                  className="sp-previewImg"
+                  src={previewItem.fileUrl}
+                  alt=""
+                />
               ) : (
                 <iframe
                   className="sp-previewFrame"
-                  src={previewItem.url}
+                  src={previewItem.fileUrl}
                   title="preview"
                 />
               )}
@@ -377,7 +387,7 @@ export default function StudyPlans() {
             <div className="sp-modalFooter">
               <a
                 className="sp-primaryLink"
-                href={previewItem.url}
+                href={previewItem.fileUrl}
                 target="_blank"
                 rel="noreferrer"
               >

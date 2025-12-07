@@ -11,6 +11,7 @@ const studyFileSchema = new mongoose.Schema(
 
     fileName: { type: String },
     fileType: { type: String },
+    description: { type: String, default: "" },
   },
   { timestamps: true }
 );
