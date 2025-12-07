@@ -16,7 +16,7 @@ export default function StudyPlans() {
   const [form, setForm] = useState({
     title: "",
     type: "plan", // plan | schedule
-    grade: "",
+    grade: "", // optional
     description: "",
     file: null,
   });
@@ -44,6 +44,7 @@ export default function StudyPlans() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
+
     return items.filter((it) => {
       const matchesType = typeFilter === "all" ? true : it.type === typeFilter;
 
@@ -81,7 +82,7 @@ export default function StudyPlans() {
       f.name.toLowerCase().endsWith(".pdf");
 
     if (!allowed) {
-      alert("⚠ مسموح فقط PDF أو صور (PNG/JPG)");
+      alert("⚠ مسموح فقط PDF أو صور (PNG/JPG/WEBP)");
       e.target.value = "";
       return;
     }
@@ -97,8 +98,9 @@ export default function StudyPlans() {
 
   const handleUpload = async () => {
     try {
-      if (!form.title || !form.type || !form.grade || !form.file) {
-        alert("⚠ اكتب العنوان، اختر النوع، الصف/المرحلة، وارفع ملف.");
+      // ✅ grade صار اختياري
+      if (!form.title || !form.type || !form.file) {
+        alert("⚠ اكتب العنوان، اختر النوع، وارفع ملف.");
         return;
       }
 
@@ -107,11 +109,12 @@ export default function StudyPlans() {
       const fd = new FormData();
       fd.append("title", form.title);
       fd.append("type", form.type);
-      fd.append("grade", form.grade);
-      fd.append("description", form.description || "");
+      if (form.grade) fd.append("grade", form.grade); // ✅ اختياري
+      if (form.description) fd.append("description", form.description);
       fd.append("file", form.file);
 
-      await apiClient.post("/api/study-files", fd); // لا تحط Content-Type يدوي (axios يضبطه)
+      // الأفضل: لا تحدد Content-Type يدويًا (axios يضبط boundary بنفسه)
+      await apiClient.post("/api/study-files", fd);
 
       alert("✔ تم رفع الملف بنجاح");
       setForm({
@@ -145,8 +148,10 @@ export default function StudyPlans() {
 
   const badgeLabel = (t) => (t === "plan" ? "خطة" : "جدول");
   const typeLabel = (t) => (t === "plan" ? "خطة دراسية" : "جدول دراسي");
-  const isImage = (it) => String(it.fileType || "").startsWith("image/");
-  const isPdf = (it) => String(it.fileType || "").includes("pdf");
+
+  // ✅ helpers
+  const isImage = (it) => String(it?.fileType || "").startsWith("image/");
+  const isPdf = (it) => String(it?.fileType || "").includes("pdf");
 
   return (
     <AdminLayout>
@@ -154,7 +159,7 @@ export default function StudyPlans() {
         <div>
           <h2 className="sp-title">الخطط والجداول الدراسية</h2>
           <p className="sp-subtitle">
-            رفع ملفات PDF/صور حسب المرحلة، مع عرض وحذف.
+            رفع ملفات PDF/صور حسب المرحلة، مع عرض ومعاينة وحذف.
           </p>
         </div>
       </div>
@@ -195,7 +200,7 @@ export default function StudyPlans() {
             </label>
 
             <label className="sp-field">
-              <span className="sp-label">الصف / المرحلة</span>
+              <span className="sp-label">الصف / المرحلة (اختياري)</span>
               <input
                 className="sp-input"
                 value={form.grade}
@@ -239,7 +244,6 @@ export default function StudyPlans() {
             </div>
 
             <button
-              type="button" // ✅ مهم
               className="sp-primaryBtn"
               onClick={handleUpload}
               disabled={uploading}
@@ -254,7 +258,7 @@ export default function StudyPlans() {
       <div className="sp-filters">
         <input
           className="sp-search"
-          placeholder="ابحث في العنوان أو الوصف..."
+          placeholder="ابحث في العنوان أو الوصف أو اسم الملف..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -357,7 +361,7 @@ export default function StudyPlans() {
         )}
       </div>
 
-      {/* Preview Modal */}
+      {/* ✅ Preview Modal (FIX PDF) */}
       {previewItem && (
         <div className="sp-modalOverlay" onClick={() => setPreviewItem(null)}>
           <div className="sp-modalCard" onClick={(e) => e.stopPropagation()}>
@@ -381,6 +385,7 @@ export default function StudyPlans() {
                   alt=""
                 />
               ) : isPdf(previewItem) ? (
+                // ✅ لا iframe للـ PDF (raw) لأن كثير متصفحات تفشل
                 <div style={{ padding: 16 }}>
                   <p style={{ marginBottom: 12 }}>
                     هذا الملف PDF. افتحه في تبويب جديد:
@@ -396,6 +401,9 @@ export default function StudyPlans() {
                 </div>
               ) : (
                 <div style={{ padding: 16 }}>
+                  <p style={{ marginBottom: 12 }}>
+                    لا يمكن معاينة هذا النوع داخل الصفحة.
+                  </p>
                   <a
                     className="sp-primaryLink"
                     href={previewItem.fileUrl}
@@ -411,7 +419,7 @@ export default function StudyPlans() {
             <div className="sp-modalFooter">
               <a
                 className="sp-primaryLink"
-                href={fileOpenUrl(previewItem)}
+                href={previewItem.fileUrl}
                 target="_blank"
                 rel="noreferrer"
               >
