@@ -158,37 +158,56 @@ router.get("/", protect, async (req, res) => {
  * ✅ Proxy Download (حل قوي لمشكلة 401)
  * GET /api/study-files/:id/download
  */
+/**
+ * GET /api/study-files/:id/download
+ * Proxy: server fetches file from Cloudinary and streams it to client
+ */
 router.get("/:id/download", protect, async (req, res) => {
   try {
     const doc = await StudyFile.findById(req.params.id);
     if (!doc) return res.status(404).json({ message: "الملف غير موجود" });
 
-    // نفس قواعد GET (صلاحيات)
+    // تأكد أن المستخدم له صلاحية يشوف الملف (نفس منطق GET /api/study-files)
     const role = req.user?.role;
     const userGrade = req.user?.grade != null ? String(req.user.grade) : null;
 
     if (role !== "admin") {
-      const allowed =
-        doc.grade == null || (userGrade && String(doc.grade) === userGrade);
-      if (!allowed) return res.status(403).json({ message: "غير مصرح" });
+      const fileGrade = doc.grade != null ? String(doc.grade) : null;
+
+      // لو الملف عام grade=null مسموح
+      // لو الملف لصف معين لازم يطابق صف المستخدم
+      if (fileGrade !== null && fileGrade !== userGrade) {
+        return res.status(403).json({ message: "غير مصرح لك بفتح هذا الملف" });
+      }
     }
 
-    const url = doc.fileUrl; // أو doc.downloadUrl
-    const r = await axios.get(url, { responseType: "stream" });
+    const fileUrl = doc.fileUrl;
+    if (!fileUrl)
+      return res.status(400).json({ message: "رابط الملف غير موجود" });
 
+    // جلب الملف كـ stream من Cloudinary
+    const upstream = await axios.get(fileUrl, { responseType: "stream" });
+
+    // مرّر نوع المحتوى للمتصفح (pdf/image)
     res.setHeader(
       "Content-Type",
-      doc.fileType || r.headers["content-type"] || "application/octet-stream"
+      upstream.headers["content-type"] ||
+        doc.fileType ||
+        "application/octet-stream"
     );
+
+    // لو تبي "تحميل" بدل "عرض" خليها attachment
+    // res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(doc.fileName || "file")}"`);
+    // لو تبي "عرض" خليها inline (أفضل للـ PDF)
     res.setHeader(
       "Content-Disposition",
       `inline; filename="${encodeURIComponent(doc.fileName || "file")}"`
     );
 
-    r.data.pipe(res);
+    upstream.data.pipe(res);
   } catch (err) {
-    console.error("proxy download error:", err?.response?.status, err?.message);
-    res.status(500).json({ message: "فشل فتح/تنزيل الملف" });
+    console.error("download proxy error:", err?.message || err);
+    res.status(500).json({ message: "خطأ أثناء فتح الملف" });
   }
 });
 
