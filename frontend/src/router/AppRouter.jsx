@@ -15,10 +15,13 @@ import Settings from "../pages/Admin/Settings";
 import RequireStudent from "../middleware/RequireStudent";
 import StudentDashboard from "../pages/Student/StudentDashboard";
 import StudentAttendance from "../pages/Student/StudentAttendance";
+import StudentSchedule from "../pages/Student/StudentSchedule";
 
 import RequireTeacher from "../middleware/RequireTeacher";
 import TeacherDashboard from "../pages/Teacher/TeacherDashboard";
 import TeacherAttendance from "../pages/Teacher/TeacherAttendance";
+import TeacherSchedule from "../pages/Teacher/TeacherSchedule";
+
 
 export default function AppRouter() {
   return (
@@ -111,6 +114,15 @@ export default function AppRouter() {
           }
         />
 
+        <Route
+          path="/student/schedule"
+          element={
+            <RequireStudent>
+              <StudentSchedule />
+            </RequireStudent>
+          }
+        />
+
         {/* TEACHER */}
         <Route
           path="/teacher"
@@ -125,6 +137,15 @@ export default function AppRouter() {
           element={
             <RequireTeacher>
               <TeacherAttendance />
+            </RequireTeacher>
+          }
+        />
+
+        <Route
+          path="/teacher/schedule"
+          element={
+            <RequireTeacher>
+              <TeacherSchedule />
             </RequireTeacher>
           }
         />
