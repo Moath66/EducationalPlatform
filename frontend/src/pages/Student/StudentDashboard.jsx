@@ -15,6 +15,13 @@ export default function StudentDashboard() {
         أهلاً، {user?.name || "الطالب"} 👋
       </h1>
 
+      <button
+        className="px-4 py-2 bg-red-500 text-white rounded-lg text-sm"
+        onClick={logout}
+      >
+        تسجيل الخروج
+      </button>
+
       {/* Simple Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <div className="p-4 bg-white rounded-xl shadow">
