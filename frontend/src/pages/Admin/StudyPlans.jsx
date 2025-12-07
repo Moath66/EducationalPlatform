@@ -239,6 +239,7 @@ export default function StudyPlans() {
             </div>
 
             <button
+              type="button" // ✅ مهم
               className="sp-primaryBtn"
               onClick={handleUpload}
               disabled={uploading}
