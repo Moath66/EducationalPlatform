@@ -7,7 +7,7 @@ export default function StudentStudyPlans() {
   const [loading, setLoading] = useState(true);
 
   // filters
-  const [typeFilter, setTypeFilter] = useState("all"); // all | plan | schedule
+  const typeFilter = "plan"; // ثابت: خطة فقط
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -23,7 +23,7 @@ export default function StudentStudyPlans() {
       setFiles(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.log(err);
-      alert("❌ تعذر تحميل الخطط والجداول");
+      alert("❌ تعذر تحميل الخطط الدراسية");
     } finally {
       setLoading(false);
     }
@@ -38,7 +38,7 @@ export default function StudentStudyPlans() {
 
   const filtered = useMemo(() => {
     return files.filter((f) => {
-      const matchesType = typeFilter === "all" ? true : f.type === typeFilter;
+      const matchesType = f.type === "plan";
 
       const matchesSearch =
         !normalizedSearch ||
@@ -64,9 +64,11 @@ export default function StudentStudyPlans() {
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-6">
         <div>
           <h1 className="text-3xl font-bold">الخطط والجداول الدراسية 📚</h1>
+          <h1 className="text-3xl font-bold">الخطة الدراسية 📚</h1>
           <p className="text-sm text-gray-600 mt-1">
-            هنا تجد خطة الدراسة والجداول الخاصة بصفّك (وأيضاً الملفات العامة).
+            هنا تجد ملفات الخطة الدراسية الخاصة بصفّك (وأيضاً الملفات العامة).
           </p>
+
           {userGrade && (
             <p className="text-xs text-gray-500 mt-1">
               يتم عرض ملفات الصف:{" "}
@@ -92,16 +94,6 @@ export default function StudentStudyPlans() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
-
-          <select
-            className="border rounded-lg px-3 py-2 text-sm bg-white"
-            value={typeFilter}
-            onChange={(e) => setTypeFilter(e.target.value)}
-          >
-            <option value="all">كل الأنواع</option>
-            <option value="plan">الخطة الدراسية</option>
-            <option value="schedule">الجدول الدراسي</option>
-          </select>
 
           <button
             onClick={fetchFiles}
@@ -133,9 +125,6 @@ export default function StudentStudyPlans() {
                 <div>
                   <p className="font-bold text-gray-800">{f.title}</p>
                   <div className="text-sm text-gray-600 mt-1 flex flex-wrap gap-2">
-                    <span className="px-2 py-0.5 rounded-full bg-gray-100">
-                      النوع: {f.type === "plan" ? "خطة" : "جدول"}
-                    </span>
                     <span className="px-2 py-0.5 rounded-full bg-gray-100">
                       الصف: {f.grade ?? "عام"}
                     </span>
