@@ -1,10 +1,17 @@
 const express = require("express");
 const router = express.Router();
+
 const multer = require("multer");
 const streamifier = require("streamifier");
 const cloudinary = require("cloudinary").v2;
 
-const { protect, adminOnly } = require("../middleware/authMiddleware");
+const {
+  protect,
+  adminOnly,
+  // teacherOnly,
+  // studentOnly,
+} = require("../middleware/authMiddleware");
+
 const StudyFile = require("../models/StudyFile");
 
 // Multer (Memory)
@@ -33,7 +40,6 @@ const uploadToCloudinary = (fileBuffer, options) => {
       if (err) return reject(err);
       resolve(result);
     });
-
     streamifier.createReadStream(fileBuffer).pipe(stream);
   });
 };
@@ -41,11 +47,12 @@ const uploadToCloudinary = (fileBuffer, options) => {
 /**
  * POST /api/study-files
  * Admin uploads PDF/Image to Cloudinary and stores metadata in DB
- * body (form-data):
- * - file (PDF/image)
+ * form-data:
+ * - file
  * - title
  * - type: "plan" | "schedule"
  * - grade (optional)
+ * - description (optional)
  */
 router.post(
   "/",
@@ -54,30 +61,25 @@ router.post(
   upload.single("file"),
   async (req, res) => {
     try {
-      const { title, type, grade } = req.body;
+      const { title, type, grade, description } = req.body;
 
       if (!req.file) return res.status(400).json({ message: "الملف مطلوب" });
       if (!title || !type)
         return res.status(400).json({ message: "العنوان والنوع مطلوبان" });
 
-      // validate type
       const allowedTypes = ["plan", "schedule"];
-      if (!allowedTypes.includes(type)) {
+      if (!allowedTypes.includes(type))
         return res.status(400).json({ message: "نوع الملف غير صحيح" });
-      }
 
       const mime = req.file.mimetype || "";
       const isPDF = mime.includes("pdf");
 
-      // Cloudinary upload options
-      const safeName = (req.file.originalname || "file")
-        .replace(/\s+/g, "-")
-        .replace(/[^\w.-]/g, "");
-
       const uploadOptions = {
         folder: "educational-platform/study-files",
         resource_type: isPDF ? "raw" : "image",
-        public_id: `${Date.now()}-${safeName}`,
+        public_id: `${Date.now()}-${req.file.originalname
+          .replace(/\s+/g, "-")
+          .replace(/[^\w.-]/g, "")}`,
         ...(isPDF ? { format: "pdf" } : {}),
       };
 
@@ -85,68 +87,70 @@ router.post(
 
       const created = await StudyFile.create({
         title,
-        type, // plan | schedule
-        grade: grade ? String(grade) : null, // نخزنها كنص لتفادي مشاكل المقارنة
+        type,
+        grade: grade ? String(grade) : null,
+        description: description || "",
         fileUrl: result.secure_url,
         publicId: result.public_id,
         fileName: req.file.originalname,
         fileType: req.file.mimetype,
       });
 
-      res.status(201).json({
-        message: "تم رفع الملف بنجاح",
-        file: created,
-      });
+      res.status(201).json({ message: "تم رفع الملف بنجاح", file: created });
     } catch (err) {
       console.error("studyFile upload error:", err);
-      res.status(500).json({ message: "خطأ أثناء رفع الملف" });
+      res.status(500).json({
+        message: err?.message || "خطأ أثناء رفع الملف",
+      });
     }
   }
 );
 
 /**
- * GET /api/study-files?type=plan&grade=10
- * ✅ متاح للطالب/المعلم/الأدمن (مسجّل دخول)
- * - Admin: يشوف كل شيء حسب query
- * - Student: يشوف grade حقه + العامة (grade=null) فقط
- * - Teacher: لو عنده grade يشوف grade حقه + العامة، لو ما عنده يشوف كل شيء
+ * GET /api/study-files?type=plan&grade=10&q=abc
+ * role-based:
+ * - admin: all
+ * - student: grade == user.grade OR grade == null
+ * - teacher: same (or all if no grade)
  */
 router.get("/", protect, async (req, res) => {
   try {
-    const { type, grade } = req.query;
+    const { type, grade, q } = req.query;
 
     const filter = {};
-    if (type) filter.type = type;
 
-    // لو أرسل grade كـ query نخليه كنص
-    if (grade) filter.grade = String(grade);
+    // type filter (optional)
+    if (type && ["plan", "schedule"].includes(type)) filter.type = type;
 
-    // 👇 فلترة حسب الدور
-    if (req.user?.role !== "admin") {
-      if (req.user?.role === "student") {
-        const g = req.user?.grade;
+    // search (optional)
+    if (q && String(q).trim()) {
+      const query = String(q).trim();
+      filter.$or = [
+        { title: { $regex: query, $options: "i" } },
+        { fileName: { $regex: query, $options: "i" } },
+        { description: { $regex: query, $options: "i" } },
+      ];
+    }
 
-        // لو الطالب ما عنده grade: يشوف العامة فقط
-        if (!g) {
-          filter.grade = null;
-        } else {
-          // الطالب يشوف العامة + صفه
-          filter.$or = [{ grade: null }, { grade: String(g) }];
+    // Grade rules
+    const role = req.user?.role; // لازم protect يحط req.user
+    const userGrade = req.user?.grade != null ? String(req.user.grade) : null;
 
-          // إذا حاول يطلب grade مختلف في query نرجع فاضي
-          if (grade && String(grade) !== String(g)) return res.json([]);
-        }
-      }
+    if (role === "admin") {
+      // admin يشوف كل شيء
+      if (grade) filter.grade = String(grade);
+    } else {
+      // teacher/student: يشوف grade حقه أو عام (grade:null)
+      const effectiveGrade = grade ? String(grade) : userGrade;
 
-      if (req.user?.role === "teacher") {
-        const tg = req.user?.grade;
-
-        // لو المعلم عنده grade: العامة + صفه
-        if (tg) {
-          filter.$or = [{ grade: null }, { grade: String(tg) }];
-          if (grade && String(grade) !== String(tg)) return res.json([]);
-        }
-        // لو ما عنده grade: يشوف كل شيء حسب type (بدون تقييد grade)
+      if (effectiveGrade) {
+        filter.$and = filter.$and || [];
+        filter.$and.push({
+          $or: [{ grade: null }, { grade: effectiveGrade }],
+        });
+      } else {
+        // لو ما عنده grade: يشوف العام فقط
+        filter.grade = null;
       }
     }
 
@@ -160,16 +164,17 @@ router.get("/", protect, async (req, res) => {
 
 /**
  * PUT /api/study-files/:id
- * Update metadata only (title/type/grade)
+ * Admin only - metadata update
  */
 router.put("/:id", protect, adminOnly, async (req, res) => {
   try {
-    const { title, type, grade } = req.body;
+    const { title, type, grade, description } = req.body;
 
     const update = {};
     if (title !== undefined) update.title = title;
     if (type !== undefined) update.type = type;
     if (grade !== undefined) update.grade = grade ? String(grade) : null;
+    if (description !== undefined) update.description = description;
 
     const updated = await StudyFile.findByIdAndUpdate(req.params.id, update, {
       new: true,
@@ -186,7 +191,7 @@ router.put("/:id", protect, adminOnly, async (req, res) => {
 
 /**
  * DELETE /api/study-files/:id
- * Delete from DB + Cloudinary
+ * Admin only - delete from DB + Cloudinary
  */
 router.delete("/:id", protect, adminOnly, async (req, res) => {
   try {
@@ -194,7 +199,6 @@ router.delete("/:id", protect, adminOnly, async (req, res) => {
     if (!doc) return res.status(404).json({ message: "الملف غير موجود" });
 
     const isPDF = (doc.fileType || "").includes("pdf");
-
     await cloudinary.uploader.destroy(doc.publicId, {
       resource_type: isPDF ? "raw" : "image",
     });
