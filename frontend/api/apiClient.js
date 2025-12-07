@@ -3,11 +3,10 @@ import axios from "axios";
 
 const apiClient = axios.create({
   baseURL: "https://educationalplatform-zwvt.onrender.com",
-  headers: { "Content-Type": "application/json" },
   withCredentials: false,
 });
 
-// Request: add token
+// ✅ Token لكل الطلبات
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
@@ -17,21 +16,16 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// Response: handle common errors safely
+// ✅ توحيد رسالة الأخطاء
 apiClient.interceptors.response.use(
-  (response) => response,
+  (res) => res,
   (error) => {
-    const status = error?.response?.status;
-
-    // لو التوكن انتهى أو غلط
-    if (status === 401) {
-      // ما نمسح كل شيء لو انت محتاج user، لكن غالباً الأفضل logout
-      localStorage.removeItem("token");
-      // اختياري:
-      // localStorage.removeItem("user");
-      // window.location.href = "/login";
-    }
-
+    const msg =
+      error?.response?.data?.message ||
+      error?.response?.data?.error ||
+      error?.message ||
+      "Request failed";
+    console.log("API ERROR:", msg, error?.response?.data);
     return Promise.reject(error);
   }
 );

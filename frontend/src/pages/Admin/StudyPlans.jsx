@@ -8,21 +8,20 @@ export default function StudyPlans() {
   const [loading, setLoading] = useState(true);
 
   // filters
-  const [typeFilter, setTypeFilter] = useState("all"); // all | plan | schedule
+  const [typeFilter, setTypeFilter] = useState("all");
   const [gradeFilter, setGradeFilter] = useState("all");
   const [search, setSearch] = useState("");
 
   // upload form
   const [form, setForm] = useState({
     title: "",
-    type: "plan", // plan | schedule
-    grade: "", // optional
+    type: "plan",
+    grade: "",
     description: "",
     file: null,
   });
   const [uploading, setUploading] = useState(false);
 
-  // preview
   const [previewItem, setPreviewItem] = useState(null);
 
   const fetchItems = async () => {
@@ -98,7 +97,6 @@ export default function StudyPlans() {
 
   const handleUpload = async () => {
     try {
-      // ✅ grade صار اختياري
       if (!form.title || !form.type || !form.file) {
         alert("⚠ اكتب العنوان، اختر النوع، وارفع ملف.");
         return;
@@ -109,11 +107,21 @@ export default function StudyPlans() {
       const fd = new FormData();
       fd.append("title", form.title);
       fd.append("type", form.type);
-      if (form.grade) fd.append("grade", form.grade); // ✅ اختياري
+      if (form.grade) fd.append("grade", form.grade);
       if (form.description) fd.append("description", form.description);
       fd.append("file", form.file);
 
-      // الأفضل: لا تحدد Content-Type يدويًا (axios يضبط boundary بنفسه)
+      // ✅ Debug: تأكد البيانات دخلت FormData
+      console.log("UPLOAD payload:", {
+        title: form.title,
+        type: form.type,
+        grade: form.grade,
+        description: form.description,
+        file: form.file?.name,
+        mime: form.file?.type,
+        size: form.file?.size,
+      });
+
       await apiClient.post("/api/study-files", fd);
 
       alert("✔ تم رفع الملف بنجاح");
@@ -148,10 +156,8 @@ export default function StudyPlans() {
 
   const badgeLabel = (t) => (t === "plan" ? "خطة" : "جدول");
   const typeLabel = (t) => (t === "plan" ? "خطة دراسية" : "جدول دراسي");
-
-  // ✅ helpers
-  const isImage = (it) => String(it?.fileType || "").startsWith("image/");
-  const isPdf = (it) => String(it?.fileType || "").includes("pdf");
+  const isImage = (it) => String(it.fileType || "").startsWith("image/");
+  const isPdf = (it) => String(it.fileType || "").includes("pdf");
 
   return (
     <AdminLayout>
@@ -159,7 +165,7 @@ export default function StudyPlans() {
         <div>
           <h2 className="sp-title">الخطط والجداول الدراسية</h2>
           <p className="sp-subtitle">
-            رفع ملفات PDF/صور حسب المرحلة، مع عرض ومعاينة وحذف.
+            رفع ملفات PDF/صور حسب المرحلة، مع عرض وحذف.
           </p>
         </div>
       </div>
@@ -234,7 +240,11 @@ export default function StudyPlans() {
               {form.file ? (
                 <>
                   <span className="sp-fileName">{form.file.name}</span>
-                  <button className="sp-linkBtn" onClick={removePickedFile}>
+                  <button
+                    type="button"
+                    className="sp-linkBtn"
+                    onClick={removePickedFile}
+                  >
                     إزالة
                   </button>
                 </>
@@ -244,6 +254,7 @@ export default function StudyPlans() {
             </div>
 
             <button
+              type="button"
               className="sp-primaryBtn"
               onClick={handleUpload}
               disabled={uploading}
@@ -258,7 +269,7 @@ export default function StudyPlans() {
       <div className="sp-filters">
         <input
           className="sp-search"
-          placeholder="ابحث في العنوان أو الوصف أو اسم الملف..."
+          placeholder="ابحث في العنوان أو الوصف..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -340,12 +351,14 @@ export default function StudyPlans() {
                     <td className="sp-actionsCell">
                       <div className="sp-actions">
                         <button
+                          type="button"
                           className="sp-btn sp-btnView"
                           onClick={() => setPreviewItem(it)}
                         >
                           معاينة
                         </button>
                         <button
+                          type="button"
                           className="sp-btn sp-btnDelete"
                           onClick={() => handleDelete(it._id)}
                         >
@@ -361,7 +374,7 @@ export default function StudyPlans() {
         )}
       </div>
 
-      {/* ✅ Preview Modal (FIX PDF) */}
+      {/* Preview Modal */}
       {previewItem && (
         <div className="sp-modalOverlay" onClick={() => setPreviewItem(null)}>
           <div className="sp-modalCard" onClick={(e) => e.stopPropagation()}>
@@ -372,7 +385,11 @@ export default function StudyPlans() {
                   {typeLabel(previewItem.type)} • {previewItem.grade || "-"}
                 </p>
               </div>
-              <button className="sp-x" onClick={() => setPreviewItem(null)}>
+              <button
+                type="button"
+                className="sp-x"
+                onClick={() => setPreviewItem(null)}
+              >
                 ×
               </button>
             </div>
@@ -385,10 +402,9 @@ export default function StudyPlans() {
                   alt=""
                 />
               ) : isPdf(previewItem) ? (
-                // ✅ لا iframe للـ PDF (raw) لأن كثير متصفحات تفشل
                 <div style={{ padding: 16 }}>
                   <p style={{ marginBottom: 12 }}>
-                    هذا الملف PDF. افتحه في تبويب جديد:
+                    هذا الملف PDF — افتحه في تبويب جديد:
                   </p>
                   <a
                     className="sp-primaryLink"
@@ -401,9 +417,6 @@ export default function StudyPlans() {
                 </div>
               ) : (
                 <div style={{ padding: 16 }}>
-                  <p style={{ marginBottom: 12 }}>
-                    لا يمكن معاينة هذا النوع داخل الصفحة.
-                  </p>
                   <a
                     className="sp-primaryLink"
                     href={previewItem.fileUrl}
@@ -414,17 +427,6 @@ export default function StudyPlans() {
                   </a>
                 </div>
               )}
-            </div>
-
-            <div className="sp-modalFooter">
-              <a
-                className="sp-primaryLink"
-                href={previewItem.fileUrl}
-                target="_blank"
-                rel="noreferrer"
-              >
-                فتح في تبويب جديد
-              </a>
             </div>
           </div>
         </div>
