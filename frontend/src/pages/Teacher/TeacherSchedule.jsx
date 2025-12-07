@@ -1,12 +1,14 @@
 // frontend/src/pages/Teacher/TeacherSchedule.jsx
 import { useEffect, useMemo, useState } from "react";
-import apiClient from "../../../api/apiClient"; // ✅ عدّل المسار لو مختلف عندك
+import apiClient from "../../../api/apiClient";
 
 export default function TeacherSchedule() {
   const [user, setUser] = useState(null);
 
-  const [type, setType] = useState("schedule"); // schedule | plan
-  const [grade, setGrade] = useState(""); // فلتر
+  // ✅ صفحة المعلم للجداول فقط
+  const TYPE = "schedule";
+
+  const [grade, setGrade] = useState(""); // فلتر اختياري يدوي
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -14,19 +16,21 @@ export default function TeacherSchedule() {
 
   useEffect(() => {
     const savedUser = JSON.parse(localStorage.getItem("user"));
-    setUser(savedUser);
+    setUser(savedUser || null);
 
-    // لو عندك grade محفوظ للمدرس أو المرحلة اللي يدرسها:
-    // إذا ما عندك، خليه فاضي والفلتر يدوي
-    if (savedUser?.grade) setGrade(savedUser.grade);
+    // ❌ لا تسوي setGrade تلقائيًا للمعلم
+    // لأن هذا ممكن يقيّد النتائج بدون قصد
   }, []);
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
-    if (type) params.set("type", type);
-    if (grade) params.set("grade", grade);
+    params.set("type", TYPE);
+
+    const g = String(grade || "").trim();
+    if (g) params.set("grade", g); // اختياري فقط
+
     return params.toString();
-  }, [type, grade]);
+  }, [grade]);
 
   const fetchFiles = async () => {
     try {
@@ -34,10 +38,10 @@ export default function TeacherSchedule() {
       setLoading(true);
 
       const res = await apiClient.get(`/api/study-files?${queryString}`);
-      setFiles(res.data || []);
+      setFiles(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      console.log(err);
-      setError("❌ فشل في تحميل الملفات. تأكد من الصلاحيات/API.");
+      console.log(err.response?.data || err);
+      setError("❌ فشل في تحميل الجداول. تأكد من الصلاحيات أو الـ API.");
       setFiles([]);
     } finally {
       setLoading(false);
@@ -45,13 +49,13 @@ export default function TeacherSchedule() {
   };
 
   useEffect(() => {
-    // لا تطلب لو ما فيه user (عشان token)
     if (!user) return;
     fetchFiles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, queryString]);
 
   const openFile = (url) => {
+    if (!url) return;
     window.open(url, "_blank", "noopener,noreferrer");
   };
 
@@ -66,41 +70,25 @@ export default function TeacherSchedule() {
       <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl md:text-3xl font-bold">
-            📄 الجدول والخطة الدراسية
+            🗓️ الجداول الدراسية
           </h1>
           <p className="text-sm text-gray-600 mt-1">
-            هنا تشوف الملفات اللي رفعتها الإدارة (جداول/خطط) وتفتحها مباشرة.
+            هنا تشوف الجداول اللي رفعتها الإدارة وتفتحها مباشرة.
           </p>
         </div>
 
-        <div className="flex gap-2">
-          <button
-            onClick={() => (window.location.href = "/teacher")}
-            className="px-4 py-2 bg-white border rounded-lg text-sm hover:bg-gray-50"
-          >
-            ← رجوع
-          </button>
-        </div>
+        <button
+          onClick={() => (window.location.href = "/teacher")}
+          className="px-4 py-2 bg-white border rounded-lg text-sm hover:bg-gray-50"
+        >
+          ← رجوع
+        </button>
       </div>
 
       {/* Filters */}
       <div className="bg-white rounded-xl shadow p-4 mb-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
-          <div>
-            <label className="block text-sm text-gray-600 mb-1">
-              نوع الملف
-            </label>
-            <select
-              value={type}
-              onChange={(e) => setType(e.target.value)}
-              className="w-full border rounded-lg px-3 py-2"
-            >
-              <option value="schedule">📅 الجداول الدراسية</option>
-              <option value="plan">📘 الخطط الدراسية</option>
-            </select>
-          </div>
-
-          <div>
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-3 items-end">
+          <div className="md:col-span-2">
             <label className="block text-sm text-gray-600 mb-1">
               الصف / المرحلة (اختياري)
             </label>
@@ -108,16 +96,24 @@ export default function TeacherSchedule() {
               value={grade}
               onChange={(e) => setGrade(e.target.value)}
               className="w-full border rounded-lg px-3 py-2"
-              placeholder="مثال: Grade 10 أو 10"
+              placeholder="اتركه فاضي لعرض كل الجداول المتاحة للمعلم"
             />
           </div>
 
-          <div className="flex items-end gap-2 justify-end">
+          <div className="flex gap-2 justify-end">
             <button
               onClick={fetchFiles}
               className="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm hover:bg-slate-900"
             >
               🔄 تحديث
+            </button>
+
+            <button
+              onClick={() => setGrade("")}
+              className="px-4 py-2 bg-white border rounded-lg text-sm hover:bg-gray-50"
+              title="مسح فلتر الصف"
+            >
+              مسح
             </button>
           </div>
         </div>
@@ -126,12 +122,12 @@ export default function TeacherSchedule() {
       {/* Content */}
       <div className="bg-white rounded-xl shadow p-4">
         {loading ? (
-          <p className="text-gray-600">🔄 جاري تحميل الملفات...</p>
+          <p className="text-gray-600">🔄 جاري تحميل الجداول...</p>
         ) : error ? (
           <p className="text-red-600">{error}</p>
         ) : files.length === 0 ? (
           <p className="text-gray-600">
-            لا توجد ملفات متاحة حسب الفلاتر الحالية.
+            لا توجد جداول متاحة حسب الفلاتر الحالية.
           </p>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -146,12 +142,13 @@ export default function TeacherSchedule() {
                       {f.title}
                     </h3>
                     <p className="text-xs text-gray-500 mt-1">
-                      النوع: {f.type === "plan" ? "خطة" : "جدول"}{" "}
-                      {f.grade ? `— الصف: ${f.grade}` : ""}
+                      النوع: جدول {f.grade ? `— الصف: ${f.grade}` : "— عام"}
                     </p>
-                    <p className="text-xs text-gray-400 mt-1">
-                      {f.fileName ? `الملف: ${f.fileName}` : ""}
-                    </p>
+                    {f.fileName ? (
+                      <p className="text-xs text-gray-400 mt-1">
+                        الملف: {f.fileName}
+                      </p>
+                    ) : null}
                   </div>
 
                   <span className="text-xs px-2 py-1 rounded-full bg-gray-100 text-gray-700">
@@ -174,8 +171,9 @@ export default function TeacherSchedule() {
                     onClick={() => openFile(f.fileUrl)}
                     className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm hover:bg-teal-700"
                   >
-                    فتح الملف
+                    فتح
                   </button>
+
                   <a
                     href={f.fileUrl}
                     target="_blank"

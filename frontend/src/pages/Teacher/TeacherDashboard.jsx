@@ -116,18 +116,26 @@ export default function TeacherDashboard() {
           </div>
         </div>
 
-        {/* Schedule & Plans (NEW) */}
+        {/* Schedule & Plans */}
         <div className="bg-white p-4 rounded-xl shadow flex flex-col gap-3">
           <h2 className="text-xl font-bold mb-1">الجدول / الخطة</h2>
           <p className="text-gray-600 text-sm">
             عرض الجداول والخطط الدراسية المرفوعة من الإدارة.
           </p>
+
           <div className="flex gap-3 justify-end">
             <button
               onClick={() => (window.location.href = "/teacher/schedule")}
               className="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm"
             >
-              📄 عرض الجدول
+              📅 عرض الجدول
+            </button>
+
+            <button
+              onClick={() => (window.location.href = "/teacher/plans")}
+              className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm"
+            >
+              📘 عرض الخطة
             </button>
           </div>
         </div>

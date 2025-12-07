@@ -16,7 +16,7 @@ export default function StudyPlans() {
   const [form, setForm] = useState({
     title: "",
     type: "plan", // plan | schedule
-    grade: "", // optional
+    grade: "",
     description: "",
     file: null,
   });
@@ -44,7 +44,6 @@ export default function StudyPlans() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
-
     return items.filter((it) => {
       const matchesType = typeFilter === "all" ? true : it.type === typeFilter;
 
@@ -53,9 +52,15 @@ export default function StudyPlans() {
 
       const matchesSearch =
         !q ||
-        it.title?.toLowerCase().includes(q) ||
-        it.description?.toLowerCase().includes(q) ||
-        it.fileName?.toLowerCase().includes(q);
+        String(it.title || "")
+          .toLowerCase()
+          .includes(q) ||
+        String(it.description || "")
+          .toLowerCase()
+          .includes(q) ||
+        String(it.fileName || "")
+          .toLowerCase()
+          .includes(q);
 
       return matchesType && matchesGrade && matchesSearch;
     });
@@ -76,7 +81,7 @@ export default function StudyPlans() {
       f.name.toLowerCase().endsWith(".pdf");
 
     if (!allowed) {
-      alert("⚠ مسموح فقط PDF أو صور (PNG/JPG/WEBP)");
+      alert("⚠ مسموح فقط PDF أو صور (PNG/JPG)");
       e.target.value = "";
       return;
     }
@@ -92,9 +97,8 @@ export default function StudyPlans() {
 
   const handleUpload = async () => {
     try {
-      // ✅ grade صار اختياري
-      if (!form.title || !form.type || !form.file) {
-        alert("⚠ اكتب العنوان، اختر النوع، وارفع ملف.");
+      if (!form.title || !form.type || !form.grade || !form.file) {
+        alert("⚠ اكتب العنوان، اختر النوع، الصف/المرحلة، وارفع ملف.");
         return;
       }
 
@@ -103,13 +107,11 @@ export default function StudyPlans() {
       const fd = new FormData();
       fd.append("title", form.title);
       fd.append("type", form.type);
-      if (form.grade) fd.append("grade", form.grade); // ✅ اختياري
-      if (form.description) fd.append("description", form.description);
+      fd.append("grade", form.grade);
+      fd.append("description", form.description || "");
       fd.append("file", form.file);
 
-      await apiClient.post("/api/study-files", fd, {
-        headers: { "Content-Type": "multipart/form-data" },
-      });
+      await apiClient.post("/api/study-files", fd); // لا تحط Content-Type يدوي (axios يضبطه)
 
       alert("✔ تم رفع الملف بنجاح");
       setForm({
@@ -123,7 +125,7 @@ export default function StudyPlans() {
       fetchItems();
     } catch (e) {
       console.log(e.response?.data || e);
-      alert("❌ فشل في رفع الملف");
+      alert(e.response?.data?.message || "❌ فشل في رفع الملف");
     } finally {
       setUploading(false);
     }
@@ -143,6 +145,8 @@ export default function StudyPlans() {
 
   const badgeLabel = (t) => (t === "plan" ? "خطة" : "جدول");
   const typeLabel = (t) => (t === "plan" ? "خطة دراسية" : "جدول دراسي");
+  const isImage = (it) => String(it.fileType || "").startsWith("image/");
+  const isPdf = (it) => String(it.fileType || "").includes("pdf");
 
   return (
     <AdminLayout>
@@ -150,7 +154,7 @@ export default function StudyPlans() {
         <div>
           <h2 className="sp-title">الخطط والجداول الدراسية</h2>
           <p className="sp-subtitle">
-            رفع ملفات PDF/صور حسب المرحلة، مع عرض ومعاينة وحذف.
+            رفع ملفات PDF/صور حسب المرحلة، مع عرض وحذف.
           </p>
         </div>
       </div>
@@ -191,7 +195,7 @@ export default function StudyPlans() {
             </label>
 
             <label className="sp-field">
-              <span className="sp-label">الصف / المرحلة (اختياري)</span>
+              <span className="sp-label">الصف / المرحلة</span>
               <input
                 className="sp-input"
                 value={form.grade}
@@ -249,7 +253,7 @@ export default function StudyPlans() {
       <div className="sp-filters">
         <input
           className="sp-search"
-          placeholder="ابحث في العنوان أو الوصف أو اسم الملف..."
+          placeholder="ابحث في العنوان أو الوصف..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -324,7 +328,7 @@ export default function StudyPlans() {
                         target="_blank"
                         rel="noreferrer"
                       >
-                        {it.fileName || "تحميل"}
+                        {it.fileName || "فتح"}
                       </a>
                     </td>
 
@@ -369,18 +373,37 @@ export default function StudyPlans() {
             </div>
 
             <div className="sp-modalBody">
-              {previewItem.fileType?.startsWith("image/") ? (
+              {isImage(previewItem) ? (
                 <img
                   className="sp-previewImg"
                   src={previewItem.fileUrl}
                   alt=""
                 />
+              ) : isPdf(previewItem) ? (
+                <div style={{ padding: 16 }}>
+                  <p style={{ marginBottom: 12 }}>
+                    هذا الملف PDF. افتحه في تبويب جديد:
+                  </p>
+                  <a
+                    className="sp-primaryLink"
+                    href={previewItem.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    فتح الـ PDF
+                  </a>
+                </div>
               ) : (
-                <iframe
-                  className="sp-previewFrame"
-                  src={previewItem.fileUrl}
-                  title="preview"
-                />
+                <div style={{ padding: 16 }}>
+                  <a
+                    className="sp-primaryLink"
+                    href={previewItem.fileUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                  >
+                    فتح الملف
+                  </a>
+                </div>
               )}
             </div>
 

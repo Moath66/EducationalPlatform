@@ -42,72 +42,67 @@ const uploadToCloudinary = (fileBuffer, options) => {
  * POST /api/study-files (Admin only)
  * form-data: file, title, type, grade?, description?
  */
-router.post(
-  "/",
-  protect,
-  adminOnly,
-  upload.single("file"),
-  async (req, res) => {
-    try {
-      const { title, type, grade, description } = req.body;
+router.post("/", protect, adminOnly, upload.single("file"), async (req, res) => {
+  try {
+    const { title, type, grade, description } = req.body;
 
-      if (!req.file) return res.status(400).json({ message: "الملف مطلوب" });
-      if (!title || !type)
-        return res.status(400).json({ message: "العنوان والنوع مطلوبان" });
+    if (!req.file) return res.status(400).json({ message: "الملف مطلوب" });
+    if (!title || !type)
+      return res.status(400).json({ message: "العنوان والنوع مطلوبان" });
 
-      const allowedTypes = ["plan", "schedule"];
-      if (!allowedTypes.includes(type))
-        return res.status(400).json({ message: "نوع الملف غير صحيح" });
+    const allowedTypes = ["plan", "schedule"];
+    if (!allowedTypes.includes(type))
+      return res.status(400).json({ message: "نوع الملف غير صحيح" });
 
-      const mime = req.file.mimetype || "";
-      const isPDF = mime.includes("pdf");
+    const mime = req.file.mimetype || "";
+    const isPDF = mime.includes("pdf");
 
-      const safeName = (req.file.originalname || "file")
-        .replace(/\s+/g, "-")
-        .replace(/[^\w.-]/g, "");
+    const safeName = (req.file.originalname || "file")
+      .replace(/\s+/g, "-")
+      .replace(/[^\w.-]/g, "");
 
-      const uploadOptions = {
-        folder: "educational-platform/study-files",
-        resource_type: isPDF ? "raw" : "image",
-        public_id: `${Date.now()}-${safeName}`,
-        ...(isPDF ? { format: "pdf" } : {}),
-      };
+    const uploadOptions = {
+      folder: "educational-platform/study-files",
+      resource_type: isPDF ? "raw" : "image",
+      public_id: `${Date.now()}-${safeName}`,
+      ...(isPDF ? { format: "pdf" } : {}),
+    };
 
-      const result = await uploadToCloudinary(req.file.buffer, uploadOptions);
+    const result = await uploadToCloudinary(req.file.buffer, uploadOptions);
 
-      const created = await StudyFile.create({
-        title,
-        type,
-        grade: grade ? String(grade) : null,
-        description: description || "",
-        fileUrl: result.secure_url,
-        publicId: result.public_id,
-        fileName: req.file.originalname,
-        fileType: req.file.mimetype,
-      });
+    const created = await StudyFile.create({
+      title,
+      type,
+      grade: grade ? String(grade) : null,
+      description: description || "",
+      fileUrl: result.secure_url,
+      publicId: result.public_id,
+      fileName: req.file.originalname,
+      fileType: req.file.mimetype,
+    });
 
-      res.status(201).json({ message: "تم رفع الملف بنجاح", file: created });
-    } catch (err) {
-      console.error("studyFile upload error:", err);
-      res.status(500).json({ message: err?.message || "خطأ أثناء رفع الملف" });
-    }
+    res.status(201).json({ message: "تم رفع الملف بنجاح", file: created });
+  } catch (err) {
+    console.error("studyFile upload error:", err);
+    res.status(500).json({ message: err?.message || "خطأ أثناء رفع الملف" });
   }
-);
+});
 
 /**
- * GET /api/study-files?type=plan&grade=10&q=abc
- * role-based:
- * - admin: all
- * - student/teacher: grade == user.grade OR grade == null
+ * GET /api/study-files?type=plan|schedule&q=...&grade=...
+ *
+ * قواعد العرض:
+ * - admin: يشوف الكل، ويقدر يفلتر grade من query لو يبغى
+ * - teacher/student: يشوف (grade:null) + (grade == req.user.grade) إن وجد
+ *   * grade في query "اختياري" فقط للفلترة اليدوية، لكن لو كان فاضي/غير موجود ما نخرب النتائج
  */
 router.get("/", protect, async (req, res) => {
   try {
-    const { type, grade, q } = req.query;
+    const { type, q, grade } = req.query;
 
     const role = req.user?.role;
     const userGrade = req.user?.grade != null ? String(req.user.grade) : null;
 
-    const filter = {};
     const and = [];
 
     // type filter
@@ -129,9 +124,14 @@ router.get("/", protect, async (req, res) => {
 
     // grade rules
     if (role === "admin") {
-      if (grade) and.push({ grade: String(grade) });
+      // admin يشوف كل شيء
+      if (grade && String(grade).trim()) and.push({ grade: String(grade).trim() });
     } else {
-      const effectiveGrade = grade ? String(grade) : userGrade;
+      // teacher/student
+      // لو المستخدم عنده grade -> اعرض العام + نفس grade
+      // لو ما عنده grade -> اعرض العام فقط (أو غيرها حسب سياستك)
+      const manualGrade = grade && String(grade).trim() ? String(grade).trim() : null;
+      const effectiveGrade = manualGrade || userGrade;
 
       if (effectiveGrade) {
         and.push({ $or: [{ grade: null }, { grade: effectiveGrade }] });
@@ -140,9 +140,9 @@ router.get("/", protect, async (req, res) => {
       }
     }
 
-    if (and.length) filter.$and = and;
-
+    const filter = and.length ? { $and: and } : {};
     const files = await StudyFile.find(filter).sort({ createdAt: -1 });
+
     res.json(files);
   } catch (err) {
     console.error("studyFile get error:", err);
@@ -168,7 +168,6 @@ router.put("/:id", protect, adminOnly, async (req, res) => {
     });
 
     if (!updated) return res.status(404).json({ message: "الملف غير موجود" });
-
     res.json({ message: "تم تحديث بيانات الملف", file: updated });
   } catch (err) {
     console.error("studyFile update error:", err);
@@ -190,7 +189,6 @@ router.delete("/:id", protect, adminOnly, async (req, res) => {
     });
 
     await StudyFile.findByIdAndDelete(req.params.id);
-
     res.json({ message: "تم حذف الملف بنجاح" });
   } catch (err) {
     console.error("studyFile delete error:", err);

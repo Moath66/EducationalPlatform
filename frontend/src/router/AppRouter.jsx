@@ -22,6 +22,7 @@ import RequireTeacher from "../middleware/RequireTeacher";
 import TeacherDashboard from "../pages/Teacher/TeacherDashboard";
 import TeacherAttendance from "../pages/Teacher/TeacherAttendance";
 import TeacherSchedule from "../pages/Teacher/TeacherSchedule";
+import TeacherStudyFiles from "../pages/Teacher/TeacherStudyFiles";
 
 export default function AppRouter() {
   return (
@@ -155,6 +156,15 @@ export default function AppRouter() {
           element={
             <RequireTeacher>
               <TeacherSchedule />
+            </RequireTeacher>
+          }
+        />
+
+        <Route
+          path="/teacher/study-files"
+          element={
+            <RequireTeacher>
+              <TeacherStudyFiles />
             </RequireTeacher>
           }
         />
