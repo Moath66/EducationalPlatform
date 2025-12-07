@@ -75,7 +75,7 @@ export default function TeacherSchedule() {
 
         <div className="flex gap-2">
           <button
-            onClick={() => (window.location.href = "/teacher/dashboard")}
+            onClick={() => (window.location.href = "/teacher")}
             className="px-4 py-2 bg-white border rounded-lg text-sm hover:bg-gray-50"
           >
             ← رجوع

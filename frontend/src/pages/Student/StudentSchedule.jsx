@@ -70,7 +70,7 @@ export default function StudentSchedule() {
           onClick={() => (window.location.href = "/student")}
           className="px-4 py-2 rounded-lg bg-slate-700 text-white hover:bg-slate-800 transition"
         >
-          ← رجوع للداشبورد
+          ← رجوع
         </button>
       </div>
 
