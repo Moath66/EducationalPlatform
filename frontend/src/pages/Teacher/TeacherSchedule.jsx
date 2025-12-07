@@ -1,6 +1,6 @@
 // frontend/src/pages/Teacher/TeacherSchedule.jsx
 import { useEffect, useMemo, useState } from "react";
-import apiClient from "../../api/apiClient"; // ✅ عدّل المسار لو مختلف عندك
+import apiClient from "../../../api/apiClient"; // ✅ عدّل المسار لو مختلف عندك
 
 export default function TeacherSchedule() {
   const [user, setUser] = useState(null);
@@ -87,7 +87,9 @@ export default function TeacherSchedule() {
       <div className="bg-white rounded-xl shadow p-4 mb-6">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
-            <label className="block text-sm text-gray-600 mb-1">نوع الملف</label>
+            <label className="block text-sm text-gray-600 mb-1">
+              نوع الملف
+            </label>
             <select
               value={type}
               onChange={(e) => setType(e.target.value)}
@@ -106,7 +108,7 @@ export default function TeacherSchedule() {
               value={grade}
               onChange={(e) => setGrade(e.target.value)}
               className="w-full border rounded-lg px-3 py-2"
-              placeholder='مثال: Grade 10 أو 10'
+              placeholder="مثال: Grade 10 أو 10"
             />
           </div>
 
