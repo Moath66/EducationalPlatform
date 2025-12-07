@@ -25,6 +25,14 @@ export default function StudyPlans() {
   // preview
   const [previewItem, setPreviewItem] = useState(null);
 
+  // ✅ Proxy URL (حل 401 في Cloudinary)
+  const fileOpenUrl = (it) => `/api/study-files/${it._id}/download`;
+
+  const isImage = (it) => String(it?.fileType || "").startsWith("image/");
+  const isPdf = (it) =>
+    String(it?.fileType || "").includes("pdf") ||
+    String(it?.fileUrl || "").toLowerCase().includes(".pdf");
+
   const fetchItems = async () => {
     try {
       setLoading(true);
@@ -44,6 +52,7 @@ export default function StudyPlans() {
 
   const filtered = useMemo(() => {
     const q = search.trim().toLowerCase();
+
     return items.filter((it) => {
       const matchesType = typeFilter === "all" ? true : it.type === typeFilter;
 
@@ -52,15 +61,9 @@ export default function StudyPlans() {
 
       const matchesSearch =
         !q ||
-        String(it.title || "")
-          .toLowerCase()
-          .includes(q) ||
-        String(it.description || "")
-          .toLowerCase()
-          .includes(q) ||
-        String(it.fileName || "")
-          .toLowerCase()
-          .includes(q);
+        String(it.title || "").toLowerCase().includes(q) ||
+        String(it.description || "").toLowerCase().includes(q) ||
+        String(it.fileName || "").toLowerCase().includes(q);
 
       return matchesType && matchesGrade && matchesSearch;
     });
@@ -81,7 +84,7 @@ export default function StudyPlans() {
       f.name.toLowerCase().endsWith(".pdf");
 
     if (!allowed) {
-      alert("⚠ مسموح فقط PDF أو صور (PNG/JPG)");
+      alert("⚠ مسموح فقط PDF أو صور (PNG/JPG/WEBP)");
       e.target.value = "";
       return;
     }
@@ -97,6 +100,7 @@ export default function StudyPlans() {
 
   const handleUpload = async () => {
     try {
+      // ✅ لو تبي grade اختياري احذف form.grade من الشرط
       if (!form.title || !form.type || !form.grade || !form.file) {
         alert("⚠ اكتب العنوان، اختر النوع، الصف/المرحلة، وارفع ملف.");
         return;
@@ -108,10 +112,11 @@ export default function StudyPlans() {
       fd.append("title", form.title);
       fd.append("type", form.type);
       fd.append("grade", form.grade);
-      fd.append("description", form.description || "");
+      if (form.description) fd.append("description", form.description);
       fd.append("file", form.file);
 
-      await apiClient.post("/api/study-files", fd); // لا تحط Content-Type يدوي (axios يضبطه)
+      // ✅ لا تضع Content-Type يدوي
+      await apiClient.post("/api/study-files", fd);
 
       alert("✔ تم رفع الملف بنجاح");
       setForm({
@@ -139,14 +144,12 @@ export default function StudyPlans() {
       fetchItems();
     } catch (e) {
       console.log(e.response?.data || e);
-      alert("❌ فشل في حذف الملف");
+      alert(e.response?.data?.message || "❌ فشل في حذف الملف");
     }
   };
 
   const badgeLabel = (t) => (t === "plan" ? "خطة" : "جدول");
   const typeLabel = (t) => (t === "plan" ? "خطة دراسية" : "جدول دراسي");
-  const isImage = (it) => String(it.fileType || "").startsWith("image/");
-  const isPdf = (it) => String(it.fileType || "").includes("pdf");
 
   return (
     <AdminLayout>
@@ -154,7 +157,7 @@ export default function StudyPlans() {
         <div>
           <h2 className="sp-title">الخطط والجداول الدراسية</h2>
           <p className="sp-subtitle">
-            رفع ملفات PDF/صور حسب المرحلة، مع عرض وحذف.
+            رفع ملفات PDF/صور حسب المرحلة، مع عرض ومعاينة وحذف.
           </p>
         </div>
       </div>
@@ -202,7 +205,7 @@ export default function StudyPlans() {
                 onChange={(e) =>
                   setForm((p) => ({ ...p, grade: e.target.value }))
                 }
-                placeholder="مثال: 10 أو Grade 10"
+                placeholder="مثال: 10 أو 1 أو Grade 10"
               />
             </label>
 
@@ -229,7 +232,11 @@ export default function StudyPlans() {
               {form.file ? (
                 <>
                   <span className="sp-fileName">{form.file.name}</span>
-                  <button className="sp-linkBtn" onClick={removePickedFile}>
+                  <button
+                    type="button"
+                    className="sp-linkBtn"
+                    onClick={removePickedFile}
+                  >
                     إزالة
                   </button>
                 </>
@@ -239,7 +246,7 @@ export default function StudyPlans() {
             </div>
 
             <button
-              type="button" // ✅ مهم
+              type="button"
               className="sp-primaryBtn"
               onClick={handleUpload}
               disabled={uploading}
@@ -254,7 +261,7 @@ export default function StudyPlans() {
       <div className="sp-filters">
         <input
           className="sp-search"
-          placeholder="ابحث في العنوان أو الوصف..."
+          placeholder="ابحث في العنوان أو الوصف أو اسم الملف..."
           value={search}
           onChange={(e) => setSearch(e.target.value)}
         />
@@ -323,9 +330,10 @@ export default function StudyPlans() {
                     <td>{it.grade || "-"}</td>
 
                     <td className="sp-fileCell">
+                      {/* ✅ استخدم Proxy بدل fileUrl */}
                       <a
                         className="sp-fileLink"
-                        href={it.fileUrl}
+                        href={fileOpenUrl(it)}
                         target="_blank"
                         rel="noreferrer"
                       >
@@ -336,12 +344,14 @@ export default function StudyPlans() {
                     <td className="sp-actionsCell">
                       <div className="sp-actions">
                         <button
+                          type="button"
                           className="sp-btn sp-btnView"
                           onClick={() => setPreviewItem(it)}
                         >
                           معاينة
                         </button>
                         <button
+                          type="button"
                           className="sp-btn sp-btnDelete"
                           onClick={() => handleDelete(it._id)}
                         >
@@ -368,7 +378,11 @@ export default function StudyPlans() {
                   {typeLabel(previewItem.type)} • {previewItem.grade || "-"}
                 </p>
               </div>
-              <button className="sp-x" onClick={() => setPreviewItem(null)}>
+              <button
+                type="button"
+                className="sp-x"
+                onClick={() => setPreviewItem(null)}
+              >
                 ×
               </button>
             </div>
@@ -377,28 +391,20 @@ export default function StudyPlans() {
               {isImage(previewItem) ? (
                 <img
                   className="sp-previewImg"
-                  src={previewItem.fileUrl}
+                  src={fileOpenUrl(previewItem)}
                   alt=""
                 />
               ) : isPdf(previewItem) ? (
-                <div style={{ padding: 16 }}>
-                  <p style={{ marginBottom: 12 }}>
-                    هذا الملف PDF. افتحه في تبويب جديد:
-                  </p>
-                  <a
-                    className="sp-primaryLink"
-                    href={previewItem.fileUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    فتح الـ PDF
-                  </a>
-                </div>
+                <iframe
+                  className="sp-previewFrame"
+                  src={fileOpenUrl(previewItem)}
+                  title="preview"
+                />
               ) : (
                 <div style={{ padding: 16 }}>
                   <a
                     className="sp-primaryLink"
-                    href={previewItem.fileUrl}
+                    href={fileOpenUrl(previewItem)}
                     target="_blank"
                     rel="noreferrer"
                   >
@@ -411,7 +417,7 @@ export default function StudyPlans() {
             <div className="sp-modalFooter">
               <a
                 className="sp-primaryLink"
-                href={previewItem.fileUrl}
+                href={fileOpenUrl(previewItem)}
                 target="_blank"
                 rel="noreferrer"
               >

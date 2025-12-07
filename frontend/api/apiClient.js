@@ -3,43 +3,35 @@ import axios from "axios";
 
 const apiClient = axios.create({
   baseURL: "https://educationalplatform-zwvt.onrender.com",
+  headers: { "Content-Type": "application/json" },
   withCredentials: false,
 });
 
-// ✅ Request: أضف التوكن تلقائيًا
+// Request: add token
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
     if (token) config.headers.Authorization = `Bearer ${token}`;
-
-    // ✅ لا تجبر Content-Type على JSON
-    // لو الطلب FormData (رفع ملفات) اترك Axios يحدد الـ boundary تلقائيًا
-    const isFormData =
-      typeof FormData !== "undefined" && config.data instanceof FormData;
-
-    if (isFormData) {
-      if (config.headers) delete config.headers["Content-Type"];
-    } else {
-      config.headers = config.headers || {};
-      if (!config.headers["Content-Type"]) {
-        config.headers["Content-Type"] = "application/json";
-      }
-    }
-
     return config;
   },
   (error) => Promise.reject(error)
 );
 
-// ✅ Response: لا تفترض وجود payload + رجّع رسالة خطأ مفهومة
+// Response: handle common errors safely
 apiClient.interceptors.response.use(
-  (response) => response, // خليه يرجع response كامل
+  (response) => response,
   (error) => {
-    error.friendlyMessage =
-      error?.response?.data?.message ||
-      error?.response?.data?.error ||
-      error?.message ||
-      "Request failed";
+    const status = error?.response?.status;
+
+    // لو التوكن انتهى أو غلط
+    if (status === 401) {
+      // ما نمسح كل شيء لو انت محتاج user، لكن غالباً الأفضل logout
+      localStorage.removeItem("token");
+      // اختياري:
+      // localStorage.removeItem("user");
+      // window.location.href = "/login";
+    }
+
     return Promise.reject(error);
   }
 );

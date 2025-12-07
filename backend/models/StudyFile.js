@@ -1,3 +1,4 @@
+// backend/models/StudyFile.js
 const mongoose = require("mongoose");
 
 const studyFileSchema = new mongoose.Schema(
@@ -7,6 +8,7 @@ const studyFileSchema = new mongoose.Schema(
     grade: { type: String, default: null },
 
     fileUrl: { type: String, required: true },
+    downloadUrl: { type: String, default: "" }, // ✅ جديد
     publicId: { type: String, required: true },
 
     fileName: { type: String },
