@@ -12,7 +12,7 @@ app.use(
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
-app.options("*", cors());
+app.options(/.*/, cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -28,7 +28,6 @@ app.use((req, res, next) => {
   }
   next();
 });
-
 
 // Routes
 const authRoutes = require("./routes/authRoutes");
