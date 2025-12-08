@@ -1,13 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
-import apiClient from "../../../api/apiClient"; // لو ملفك هنا src/api/apiClient.js
+import apiClient from "../../../api/apiClient"; // src/api/apiClient.js
 
 export default function StudentStudyPlans() {
   const [user, setUser] = useState(null);
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  // filters
-  const typeFilter = "plan"; // ثابت: خطة فقط
   const [search, setSearch] = useState("");
 
   useEffect(() => {
@@ -15,47 +13,58 @@ export default function StudentStudyPlans() {
     setUser(savedUser || null);
   }, []);
 
-  const fetchFiles = async () => {
+  const fetchPlans = async () => {
     try {
       setLoading(true);
-      // نجيب كل الملفات، ثم نفلتر بالواجهة حسب grade (لو موجود)
-      const res = await apiClient.get("/api/study-files");
+
+      // ✅ نطلب الخطط فقط، ولا نرسل grade من الفرونت
+      const res = await apiClient.get("/api/study-files", {
+        params: { type: "plan" },
+      });
+
       setFiles(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
-      console.log(err);
-      alert("❌ تعذر تحميل الخطط الدراسية");
+      console.log(err.response?.data || err);
+      alert(err.response?.data?.message || "❌ تعذر تحميل الخطط الدراسية");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    fetchFiles();
-  }, []);
+    if (!user) return; // مهم عشان التوكن يكون موجود
+    fetchPlans();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user]);
 
   const normalizedSearch = search.trim().toLowerCase();
-  const userGrade = user?.grade || null;
 
   const filtered = useMemo(() => {
+    if (!normalizedSearch) return files;
+
     return files.filter((f) => {
-      const matchesType = f.type === "plan";
-
-      const matchesSearch =
-        !normalizedSearch ||
-        f.title?.toLowerCase().includes(normalizedSearch) ||
-        f.fileName?.toLowerCase().includes(normalizedSearch);
-
-      // لو الطالب له grade: نعرض اللي grade حقها نفس grade أو grade = null (عام)
-      const matchesGrade = !userGrade
-        ? true
-        : f.grade == null || String(f.grade) === String(userGrade);
-
-      return matchesType && matchesSearch && matchesGrade;
+      const t = String(f.title || "").toLowerCase();
+      const d = String(f.description || "").toLowerCase();
+      const g = String(f.grade || "").toLowerCase();
+      const fn = String(f.fileName || "").toLowerCase();
+      return (
+        t.includes(normalizedSearch) ||
+        d.includes(normalizedSearch) ||
+        g.includes(normalizedSearch) ||
+        fn.includes(normalizedSearch)
+      );
     });
-  }, [files, typeFilter, normalizedSearch, userGrade]);
+  }, [files, normalizedSearch]);
 
-  const openFile = (url) => {
-    window.open(url, "_blank", "noopener,noreferrer");
+  // ✅ رابط البروكسي (يحل مشاكل فتح PDF/401/CORS)
+  const fileProxyUrl = (f) =>
+    `${apiClient.defaults.baseURL}/api/study-files/${f._id}/download`;
+
+  const fileProxyDownloadUrl = (f) =>
+    `${apiClient.defaults.baseURL}/api/study-files/${f._id}/download?dl=1`;
+
+  const openFile = (f) => {
+    window.open(fileProxyUrl(f), "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -68,12 +77,12 @@ export default function StudentStudyPlans() {
             هنا تجد ملفات الخطة الدراسية الخاصة بصفّك (وأيضاً الملفات العامة).
           </p>
 
-          {userGrade && (
+          {user?.grade ? (
             <p className="text-xs text-gray-500 mt-1">
               يتم عرض ملفات الصف:{" "}
-              <span className="font-semibold">{userGrade}</span>
+              <span className="font-semibold">{user.grade}</span>
             </p>
-          )}
+          ) : null}
         </div>
 
         <button
@@ -89,13 +98,13 @@ export default function StudentStudyPlans() {
         <div className="flex flex-col md:flex-row gap-3 md:items-center">
           <input
             className="flex-1 border rounded-lg px-3 py-2 text-sm outline-none focus:ring-2 focus:ring-emerald-300"
-            placeholder="ابحث بعنوان الملف..."
+            placeholder="ابحث بعنوان الملف أو الوصف..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
           />
 
           <button
-            onClick={fetchFiles}
+            onClick={fetchPlans}
             className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm hover:bg-emerald-700"
           >
             🔄 تحديث
@@ -123,30 +132,40 @@ export default function StudentStudyPlans() {
               >
                 <div>
                   <p className="font-bold text-gray-800">{f.title}</p>
-                  <div className="text-sm text-gray-600 mt-1 flex flex-wrap gap-2">
+                  {f.description ? (
+                    <p className="text-sm text-gray-600 mt-1">
+                      {f.description}
+                    </p>
+                  ) : null}
+
+                  <div className="text-sm text-gray-600 mt-2 flex flex-wrap gap-2">
                     <span className="px-2 py-0.5 rounded-full bg-gray-100">
                       الصف: {f.grade ?? "عام"}
                     </span>
                     <span className="px-2 py-0.5 rounded-full bg-gray-100">
                       {f.fileType || "file"}
                     </span>
+                    {f.fileName ? (
+                      <span className="px-2 py-0.5 rounded-full bg-gray-100">
+                        {f.fileName}
+                      </span>
+                    ) : null}
                   </div>
                 </div>
 
                 <div className="flex gap-2 justify-end">
                   <button
-                    onClick={() => openFile(f.fileUrl)}
+                    onClick={() => openFile(f)}
                     className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm hover:bg-indigo-700"
                   >
                     فتح
                   </button>
 
                   <a
-                    href={f.fileUrl}
-                    download
+                    href={fileProxyDownloadUrl(f)}
                     target="_blank"
                     rel="noreferrer"
-                    className="px-4 py-2 bg-gray-100 text-gray-800 rounded-lg text-sm hover:bg-gray-200"
+                    className="px-4 py-2 rounded-lg bg-slate-200 text-slate-800 hover:bg-slate-300 transition"
                   >
                     تحميل
                   </a>

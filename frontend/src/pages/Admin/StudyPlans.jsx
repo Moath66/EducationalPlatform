@@ -23,6 +23,7 @@ export default function StudyPlans() {
   const [uploading, setUploading] = useState(false);
 
   const [previewItem, setPreviewItem] = useState(null);
+  const [opening, setOpening] = useState(false);
 
   const fetchItems = async () => {
     try {
@@ -67,8 +68,12 @@ export default function StudyPlans() {
   }, [items, typeFilter, gradeFilter, search]);
 
   const grades = useMemo(() => {
-    const set = new Set(items.map((x) => x.grade).filter(Boolean));
-    return Array.from(set).sort((a, b) => String(a).localeCompare(String(b)));
+    const s = new Set(
+      items
+        .map((x) => (x.grade == null ? null : String(x.grade)))
+        .filter(Boolean)
+    );
+    return Array.from(s).sort((a, b) => String(a).localeCompare(String(b)));
   }, [items]);
 
   const onPickFile = (e) => {
@@ -111,17 +116,6 @@ export default function StudyPlans() {
       if (form.description) fd.append("description", form.description);
       fd.append("file", form.file);
 
-      // ✅ Debug: تأكد البيانات دخلت FormData
-      console.log("UPLOAD payload:", {
-        title: form.title,
-        type: form.type,
-        grade: form.grade,
-        description: form.description,
-        file: form.file?.name,
-        mime: form.file?.type,
-        size: form.file?.size,
-      });
-
       await apiClient.post("/api/study-files", fd);
 
       alert("✔ تم رفع الملف بنجاح");
@@ -158,6 +152,48 @@ export default function StudyPlans() {
   const typeLabel = (t) => (t === "plan" ? "خطة دراسية" : "جدول دراسي");
   const isImage = (it) => String(it.fileType || "").startsWith("image/");
   const isPdf = (it) => String(it.fileType || "").includes("pdf");
+
+  // ✅ endpoints
+  const proxyPath = (f) => `/api/study-files/${f._id}/download`;
+  const proxyDownloadPath = (f) => `/api/study-files/${f._id}/download?dl=1`;
+
+  // ✅ فتح/تحميل عبر axios (يرسل التوكن)
+  const openViaProxy = async (file, forceDownload = false) => {
+    if (!file?._id) return;
+    try {
+      setOpening(true);
+
+      const url = forceDownload ? proxyDownloadPath(file) : proxyPath(file);
+      const res = await apiClient.get(url, { responseType: "blob" });
+
+      const contentType =
+        res.headers?.["content-type"] ||
+        file.fileType ||
+        "application/octet-stream";
+
+      const blob = new Blob([res.data], { type: contentType });
+      const blobUrl = window.URL.createObjectURL(blob);
+
+      if (forceDownload) {
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = file.fileName || "file";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+      } else {
+        window.open(blobUrl, "_blank", "noopener,noreferrer");
+      }
+
+      // تنظيف
+      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
+    } catch (e) {
+      console.log(e.response?.data || e);
+      alert(e.response?.data?.message || "❌ تعذر فتح الملف عبر البروكسي");
+    } finally {
+      setOpening(false);
+    }
+  };
 
   return (
     <AdminLayout>
@@ -338,14 +374,21 @@ export default function StudyPlans() {
                     <td>{it.grade || "-"}</td>
 
                     <td className="sp-fileCell">
-                      <a
+                      <button
+                        type="button"
                         className="sp-fileLink"
-                        href={it.fileUrl}
-                        target="_blank"
-                        rel="noreferrer"
+                        style={{
+                          background: "none",
+                          border: "none",
+                          padding: 0,
+                          cursor: "pointer",
+                        }}
+                        onClick={() => openViaProxy(it, false)}
+                        disabled={opening}
+                        title="فتح عبر البروكسي (مع التوكن)"
                       >
                         {it.fileName || "فتح"}
-                      </a>
+                      </button>
                     </td>
 
                     <td className="sp-actionsCell">
@@ -357,6 +400,17 @@ export default function StudyPlans() {
                         >
                           معاينة
                         </button>
+
+                        <button
+                          type="button"
+                          className="sp-btn"
+                          onClick={() => openViaProxy(it, true)}
+                          disabled={opening}
+                          title="تحميل عبر البروكسي"
+                        >
+                          تحميل
+                        </button>
+
                         <button
                           type="button"
                           className="sp-btn sp-btnDelete"
@@ -396,36 +450,29 @@ export default function StudyPlans() {
 
             <div className="sp-modalBody">
               {isImage(previewItem) ? (
-                <img
-                  className="sp-previewImg"
-                  src={previewItem.fileUrl}
-                  alt=""
-                />
+                <button
+                  type="button"
+                  className="sp-primaryLink"
+                  onClick={() => openViaProxy(previewItem, false)}
+                >
+                  فتح الصورة
+                </button>
               ) : isPdf(previewItem) ? (
-                <div style={{ padding: 16 }}>
-                  <p style={{ marginBottom: 12 }}>
-                    هذا الملف PDF — افتحه في تبويب جديد:
-                  </p>
-                  <a
-                    className="sp-primaryLink"
-                    href={previewItem.fileUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    فتح الـ PDF
-                  </a>
-                </div>
+                <button
+                  type="button"
+                  className="sp-primaryLink"
+                  onClick={() => openViaProxy(previewItem, false)}
+                >
+                  فتح الـ PDF
+                </button>
               ) : (
-                <div style={{ padding: 16 }}>
-                  <a
-                    className="sp-primaryLink"
-                    href={previewItem.fileUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                  >
-                    فتح الملف
-                  </a>
-                </div>
+                <button
+                  type="button"
+                  className="sp-primaryLink"
+                  onClick={() => openViaProxy(previewItem, false)}
+                >
+                  فتح الملف
+                </button>
               )}
             </div>
           </div>

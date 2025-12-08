@@ -19,17 +19,16 @@ export default function TeacherStudyPlans() {
       setLoading(true);
 
       const res = await apiClient.get("/api/study-files", {
-        params: {
-          type: TYPE,
-          // ✅ لا ترسل grade من الفرونت (خله يعتمد على role+req.user.grade في الباك)
-          // لو تبغى فلتر يدوي للمعلم أضف input grade مثل صفحة TeacherSchedule
-        },
+        params: { type: TYPE },
+        // ✅ لا ترسل grade من الفرونت
+        // خلي الباك يطبق role + req.user.grade
       });
 
       setFiles(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.log(err.response?.data || err);
-      alert("❌ فشل في تحميل الخطط الدراسية");
+      alert(err.response?.data?.message || "❌ فشل في تحميل الخطط الدراسية");
+      setFiles([]);
     } finally {
       setLoading(false);
     }
@@ -59,6 +58,18 @@ export default function TeacherStudyPlans() {
       );
     });
   }, [files, normalizedSearch]);
+
+  // ✅ Proxy URL (حل فتح PDF/CORS/401)
+  const fileProxyUrl = (f) =>
+    `${apiClient.defaults.baseURL}/api/study-files/${f._id}/download`;
+
+  const fileProxyDownloadUrl = (f) =>
+    `${apiClient.defaults.baseURL}/api/study-files/${f._id}/download?dl=1`;
+
+  const openFile = (f) => {
+    if (!f?._id) return;
+    window.open(fileProxyUrl(f), "_blank", "noopener,noreferrer");
+  };
 
   return (
     <div className="p-6 text-right" dir="rtl">
@@ -139,17 +150,16 @@ export default function TeacherStudyPlans() {
                 </div>
 
                 <div className="flex gap-2 justify-end">
-                  <a
-                    href={f.fileUrl}
-                    target="_blank"
-                    rel="noreferrer"
+                  <button
+                    onClick={() => openFile(f)}
                     className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition"
+                    type="button"
                   >
                     فتح
-                  </a>
+                  </button>
 
                   <a
-                    href={f.fileUrl}
+                    href={fileProxyDownloadUrl(f)}
                     target="_blank"
                     rel="noreferrer"
                     className="px-4 py-2 rounded-lg bg-slate-200 text-slate-800 hover:bg-slate-300 transition"

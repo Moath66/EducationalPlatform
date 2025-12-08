@@ -5,8 +5,7 @@ import apiClient from "../../../api/apiClient";
 export default function TeacherSchedule() {
   const [user, setUser] = useState(null);
 
-  // ✅ صفحة المعلم للجداول فقط
-  const TYPE = "schedule";
+  const TYPE = "schedule"; // ✅ صفحة المعلم للجداول فقط
 
   const [grade, setGrade] = useState(""); // فلتر اختياري يدوي
   const [files, setFiles] = useState([]);
@@ -17,9 +16,6 @@ export default function TeacherSchedule() {
   useEffect(() => {
     const savedUser = JSON.parse(localStorage.getItem("user"));
     setUser(savedUser || null);
-
-    // ❌ لا تسوي setGrade تلقائيًا للمعلم
-    // لأن هذا ممكن يقيّد النتائج بدون قصد
   }, []);
 
   const queryString = useMemo(() => {
@@ -41,7 +37,7 @@ export default function TeacherSchedule() {
       setFiles(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.log(err.response?.data || err);
-      setError("❌ فشل في تحميل الجداول. تأكد من الصلاحيات أو الـ API.");
+      setError(err.response?.data?.message || "❌ فشل في تحميل الجداول.");
       setFiles([]);
     } finally {
       setLoading(false);
@@ -49,14 +45,21 @@ export default function TeacherSchedule() {
   };
 
   useEffect(() => {
-    if (!user) return;
+    if (!user) return; // مهم عشان التوكن
     fetchFiles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user, queryString]);
 
-  const openFile = (url) => {
-    if (!url) return;
-    window.open(url, "_blank", "noopener,noreferrer");
+  // ✅ رابط البروكسي (حل فتح PDF + 401/CORS)
+  const fileProxyUrl = (f) =>
+    `${apiClient.defaults.baseURL}/api/study-files/${f._id}/download`;
+
+  const fileProxyDownloadUrl = (f) =>
+    `${apiClient.defaults.baseURL}/api/study-files/${f._id}/download?dl=1`;
+
+  const openFile = (f) => {
+    if (!f?._id) return;
+    window.open(fileProxyUrl(f), "_blank", "noopener,noreferrer");
   };
 
   const isPDF = (mime, url) => {
@@ -156,10 +159,10 @@ export default function TeacherSchedule() {
                   </span>
                 </div>
 
-                {/* Preview (صورة فقط) */}
-                {!isPDF(f.fileType, f.fileUrl) && f.fileUrl && (
+                {/* Preview (صورة فقط) — عبر proxy */}
+                {!isPDF(f.fileType, f.fileUrl) && (
                   <img
-                    src={f.fileUrl}
+                    src={fileProxyUrl(f)}
                     alt={f.title}
                     className="w-full max-h-64 object-contain rounded-lg bg-gray-50 border"
                     loading="lazy"
@@ -168,19 +171,19 @@ export default function TeacherSchedule() {
 
                 <div className="flex gap-2 justify-end">
                   <button
-                    onClick={() => openFile(f.fileUrl)}
+                    onClick={() => openFile(f)}
                     className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm hover:bg-teal-700"
                   >
                     فتح
                   </button>
 
                   <a
-                    href={f.fileUrl}
+                    href={fileProxyDownloadUrl(f)}
                     target="_blank"
                     rel="noreferrer"
-                    className="px-4 py-2 bg-white border rounded-lg text-sm hover:bg-gray-50"
+                    className="px-4 py-2 rounded-lg bg-slate-200 text-slate-800 hover:bg-slate-300 transition"
                   >
-                    تحميل / عرض
+                    تحميل
                   </a>
                 </div>
               </div>

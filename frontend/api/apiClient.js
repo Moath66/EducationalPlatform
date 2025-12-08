@@ -3,6 +3,8 @@ import axios from "axios";
 
 const apiClient = axios.create({
   baseURL: "https://educationalplatform-zwvt.onrender.com",
+  // لو تحب تثبّت /api هنا بدل ما تكتبها بكل مكان:
+  // baseURL: "https://educationalplatform-zwvt.onrender.com/api",
   withCredentials: false,
 });
 
@@ -10,7 +12,17 @@ const apiClient = axios.create({
 apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
-    if (token) config.headers.Authorization = `Bearer ${token}`;
+
+    // مهم: تأكد headers موجودة
+    config.headers = config.headers || {};
+
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      // اختياري: امسح الهيدر لو ما فيه توكن
+      delete config.headers.Authorization;
+    }
+
     return config;
   },
   (error) => Promise.reject(error)

@@ -8,10 +8,11 @@ const app = express();
 app.use(
   cors({
     origin: "*",
-    methods: ["GET", "POST", "PUT", "DELETE"],
+    methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
 );
+app.options("*", cors());
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -19,9 +20,15 @@ app.use(express.urlencoded({ extended: true }));
 // Debug (مهم جداً لتتبع المشكلة في Render)
 app.use((req, res, next) => {
   console.log("📩 NEW REQUEST:", req.method, req.url);
-  console.log("📦 BODY:", req.body);
+  const ct = req.headers["content-type"] || "";
+  if (!ct.includes("multipart/form-data")) {
+    console.log("📦 BODY:", req.body);
+  } else {
+    console.log("📦 BODY: multipart/form-data (skipped logging)");
+  }
   next();
 });
+
 
 // Routes
 const authRoutes = require("./routes/authRoutes");

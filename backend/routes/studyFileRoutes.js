@@ -5,7 +5,7 @@ const router = express.Router();
 const multer = require("multer");
 const streamifier = require("streamifier");
 const axios = require("axios");
-const cloudinary = require("cloudinary").v2;
+const cloudinary = require("../config/cloudinary"); // ✅ مهم
 
 const { protect, adminOnly } = require("../middleware/authMiddleware");
 const StudyFile = require("../models/StudyFile");
@@ -67,19 +67,18 @@ router.post(
         .replace(/\s+/g, "-")
         .replace(/[^\w.-]/g, "");
 
-      const publicId = `educational-platform/study-files/${Date.now()}-${safeName}`;
-
       const uploadOptions = {
         folder: "educational-platform/study-files",
-        public_id: publicId.split("/").pop(), // Cloudinary will prefix folder automatically
+        public_id: `${Date.now()}-${safeName}`,
         resource_type: isPDF ? "raw" : "image",
         use_filename: true,
         unique_filename: true,
+        ...(isPDF ? { format: "pdf" } : {}),
       };
 
       const result = await uploadToCloudinary(req.file.buffer, uploadOptions);
 
-      // رابط تنزيل “attachment” (يساعد كثير مع PDF)
+      // رابط تنزيل attachment
       const downloadUrl = isPDF
         ? result.secure_url.replace("/upload/", "/upload/fl_attachment/")
         : result.secure_url;
@@ -106,9 +105,6 @@ router.post(
 
 /**
  * GET /api/study-files?type=plan&grade=10&q=abc
- * role-based:
- * - admin: all
- * - student/teacher: grade==user.grade OR grade==null
  */
 router.get("/", protect, async (req, res) => {
   try {
@@ -132,7 +128,6 @@ router.get("/", protect, async (req, res) => {
       });
     }
 
-    // ✅ grade rules: teacher/student يشوف grade حقه أو العام
     if (role === "admin") {
       if (grade) and.push({ grade: String(grade) });
     } else {
@@ -155,54 +150,84 @@ router.get("/", protect, async (req, res) => {
 });
 
 /**
- * ✅ Proxy Download (حل قوي لمشكلة 401)
+ * ✅ Proxy Download
  * GET /api/study-files/:id/download
- */
-/**
- * GET /api/study-files/:id/download
- * Proxy: server fetches file from Cloudinary and streams it to client
  */
 router.get("/:id/download", protect, async (req, res) => {
   try {
     const doc = await StudyFile.findById(req.params.id);
     if (!doc) return res.status(404).json({ message: "الملف غير موجود" });
 
-    // تأكد أن المستخدم له صلاحية يشوف الملف (نفس منطق GET /api/study-files)
     const role = req.user?.role;
     const userGrade = req.user?.grade != null ? String(req.user.grade) : null;
 
     if (role !== "admin") {
       const fileGrade = doc.grade != null ? String(doc.grade) : null;
-
-      // لو الملف عام grade=null مسموح
-      // لو الملف لصف معين لازم يطابق صف المستخدم
       if (fileGrade !== null && fileGrade !== userGrade) {
         return res.status(403).json({ message: "غير مصرح لك بفتح هذا الملف" });
       }
     }
 
-    const fileUrl = doc.fileUrl;
-    if (!fileUrl)
+    const urlPrimary = doc.downloadUrl || doc.fileUrl;
+    const urlFallback = doc.downloadUrl ? doc.fileUrl : doc.downloadUrl;
+
+    if (!urlPrimary) {
       return res.status(400).json({ message: "رابط الملف غير موجود" });
+    }
 
-    // جلب الملف كـ stream من Cloudinary
-    const upstream = await axios.get(fileUrl, { responseType: "stream" });
+    const tryFetch = async (url) =>
+      axios.get(url, {
+        responseType: "stream",
+        validateStatus: () => true,
+      });
 
-    // مرّر نوع المحتوى للمتصفح (pdf/image)
-    res.setHeader(
-      "Content-Type",
+    let upstream = await tryFetch(urlPrimary);
+
+    if (upstream.status >= 400 && urlFallback) {
+      upstream = await tryFetch(urlFallback);
+    }
+
+    if (upstream.status >= 400) {
+      return res.status(502).json({
+        message: `فشل جلب الملف من Cloudinary (status ${upstream.status})`,
+      });
+    }
+
+    const contentType =
       upstream.headers["content-type"] ||
-        doc.fileType ||
-        "application/octet-stream"
-    );
+      doc.fileType ||
+      "application/octet-stream";
 
-    // لو تبي "تحميل" بدل "عرض" خليها attachment
-    // res.setHeader("Content-Disposition", `attachment; filename="${encodeURIComponent(doc.fileName || "file")}"`);
-    // لو تبي "عرض" خليها inline (أفضل للـ PDF)
+    res.setHeader("Content-Type", contentType);
+    res.setHeader("X-Content-Type-Options", "nosniff");
+    res.setHeader("Accept-Ranges", "none"); // ✅ يساعد مع PDF في بعض المتصفحات
+
+    const dl = String(req.query.dl || "") === "1";
+    const dispositionType = dl ? "attachment" : "inline";
+
+    const fallbackName = doc.fileName || "file";
+    // RFC5987 filename* to support Arabic/UTF-8 safely
+    const filenameStar = `UTF-8''${encodeURIComponent(fallbackName)}`;
+
     res.setHeader(
       "Content-Disposition",
-      `inline; filename="${encodeURIComponent(doc.fileName || "file")}"`
+      `${dispositionType}; filename="${fallbackName.replace(
+        /"/g,
+        ""
+      )}"; filename*=${filenameStar}`
     );
+
+    // ✅ handle stream errors
+    upstream.data.on("error", (e) => {
+      console.error("Upstream stream error:", e?.message || e);
+      if (!res.headersSent) res.status(502).end("Upstream stream error");
+      else res.end();
+    });
+
+    res.on("close", () => {
+      // لو العميل قفل الصفحة، اقفل الستريم
+      if (upstream?.data?.destroy) upstream.data.destroy();
+    });
 
     upstream.data.pipe(res);
   } catch (err) {

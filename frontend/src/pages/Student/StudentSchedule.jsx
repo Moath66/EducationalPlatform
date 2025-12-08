@@ -13,29 +13,27 @@ export default function StudentSchedule() {
     setUser(savedUser || null);
   }, []);
 
-  const fetchSchedules = async (grade) => {
+  const fetchSchedules = async () => {
     try {
       setLoading(true);
 
-      // student يشوف ملفات نوع schedule حسب صفه
-      // لاحظ: هذا يتطلب أن GET /api/study-files يكون متاح للطالب (protect فقط أو public)
+      // ✅ لا ترسل grade من الفرونت — السيرفر بيستخدم req.user.grade تلقائياً
       const res = await apiClient.get("/api/study-files", {
-        params: { type: "schedule", grade: grade || undefined },
+        params: { type: "schedule" },
       });
 
       setFiles(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.log(err.response?.data || err);
-      alert("❌ فشل في تحميل الجداول الدراسية");
+      alert(err.response?.data?.message || "❌ فشل في تحميل الجداول الدراسية");
     } finally {
       setLoading(false);
     }
   };
 
   useEffect(() => {
-    // grade من بيانات الطالب
-    if (user) fetchSchedules(user.grade);
-    // إذا user لسه null ما نسوي طلب
+    if (!user) return; // عشان التوكن يكون موجود
+    fetchSchedules();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user]);
 
@@ -44,20 +42,27 @@ export default function StudentSchedule() {
   const filtered = useMemo(() => {
     if (!normalizedSearch) return files;
     return files.filter((f) => {
-      const t = (f.title || "").toLowerCase();
-      const d = (f.description || "").toLowerCase();
-      const g = (f.grade || "").toLowerCase();
+      const t = String(f.title || "").toLowerCase();
+      const d = String(f.description || "").toLowerCase();
+      const g = String(f.grade || "").toLowerCase();
+      const fn = String(f.fileName || "").toLowerCase();
       return (
         t.includes(normalizedSearch) ||
         d.includes(normalizedSearch) ||
-        g.includes(normalizedSearch)
+        g.includes(normalizedSearch) ||
+        fn.includes(normalizedSearch)
       );
     });
   }, [files, normalizedSearch]);
 
+  const fileProxyUrl = (f) =>
+    `${apiClient.defaults.baseURL}/api/study-files/${f._id}/download`;
+
+  const fileProxyDownloadUrl = (f) =>
+    `${apiClient.defaults.baseURL}/api/study-files/${f._id}/download?dl=1`;
+
   return (
-    <div className="p-6 text-right" dir="rtl">
-      {/* Header */}
+    <div className="p-6 text-right min-h-screen bg-gray-100" dir="rtl">
       <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between mb-6">
         <div>
           <h1 className="text-3xl font-bold">🗓️ الجدول الدراسي</h1>
@@ -74,14 +79,13 @@ export default function StudentSchedule() {
         </button>
       </div>
 
-      {/* Filters */}
       <div className="bg-white rounded-xl shadow p-4 mb-6 flex flex-col md:flex-row gap-3 md:items-center">
         <div className="flex-1">
           <label className="text-sm text-slate-600">بحث</label>
           <input
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            placeholder="ابحث بالعنوان أو الوصف..."
+            placeholder="ابحث بالعنوان أو الوصف أو اسم الملف..."
             className="mt-1 w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400"
           />
         </div>
@@ -92,9 +96,15 @@ export default function StudentSchedule() {
             {user?.grade || "غير محدد"}
           </div>
         </div>
+
+        <button
+          onClick={fetchSchedules}
+          className="px-4 py-2 rounded-lg bg-slate-800 text-white hover:bg-slate-900 transition"
+        >
+          🔄 تحديث
+        </button>
       </div>
 
-      {/* Content */}
       <div className="bg-white rounded-xl shadow p-4">
         {loading ? (
           <div className="py-10 text-center text-slate-500">
@@ -119,13 +129,14 @@ export default function StudentSchedule() {
                     </p>
                   ) : null}
                   <div className="text-xs text-slate-500 mt-2">
-                    الصف: {f.grade || "غير محدد"} • النوع: جدول
+                    الصف: {f.grade || "عام"} • النوع: جدول •{" "}
+                    {f.fileType || "unknown"}
                   </div>
                 </div>
 
                 <div className="flex gap-2 justify-end">
                   <a
-                    href={f.fileUrl}
+                    href={fileProxyUrl(f)}
                     target="_blank"
                     rel="noreferrer"
                     className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition"
@@ -134,7 +145,7 @@ export default function StudentSchedule() {
                   </a>
 
                   <a
-                    href={f.fileUrl}
+                    href={fileProxyDownloadUrl(f)}
                     target="_blank"
                     rel="noreferrer"
                     className="px-4 py-2 rounded-lg bg-slate-200 text-slate-800 hover:bg-slate-300 transition"
