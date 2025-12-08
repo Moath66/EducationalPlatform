@@ -175,10 +175,17 @@ router.get("/:id/download", protect, async (req, res) => {
       return res.status(400).json({ message: "رابط الملف غير موجود" });
     }
 
-    const tryFetch = async (url) =>
+    const tryFetch = (url) =>
       axios.get(url, {
         responseType: "stream",
+        timeout: 20000,
+        maxRedirects: 5,
         validateStatus: () => true,
+        headers: {
+          // هيدر مفيد مع بعض المزودين
+          "User-Agent": "Mozilla/5.0",
+          Accept: "*/*",
+        },
       });
 
     let upstream = await tryFetch(urlPrimary);
@@ -188,8 +195,10 @@ router.get("/:id/download", protect, async (req, res) => {
     }
 
     if (upstream.status >= 400) {
+      // DEBUG مهم عشان نعرف ليش 502
       return res.status(502).json({
         message: `فشل جلب الملف من Cloudinary (status ${upstream.status})`,
+        tried: { urlPrimary: !!urlPrimary, urlFallback: !!urlFallback },
       });
     }
 
@@ -200,38 +209,22 @@ router.get("/:id/download", protect, async (req, res) => {
 
     res.setHeader("Content-Type", contentType);
     res.setHeader("X-Content-Type-Options", "nosniff");
-    res.setHeader("Accept-Ranges", "none"); // ✅ يساعد مع PDF في بعض المتصفحات
 
     const dl = String(req.query.dl || "") === "1";
-    const dispositionType = dl ? "attachment" : "inline";
-
-    const fallbackName = doc.fileName || "file";
-    // RFC5987 filename* to support Arabic/UTF-8 safely
-    const filenameStar = `UTF-8''${encodeURIComponent(fallbackName)}`;
-
     res.setHeader(
       "Content-Disposition",
-      `${dispositionType}; filename="${fallbackName.replace(
-        /"/g,
-        ""
-      )}"; filename*=${filenameStar}`
+      `${dl ? "attachment" : "inline"}; filename="${encodeURIComponent(
+        doc.fileName || "file"
+      )}"`
     );
-
-    // ✅ handle stream errors
-    upstream.data.on("error", (e) => {
-      console.error("Upstream stream error:", e?.message || e);
-      if (!res.headersSent) res.status(502).end("Upstream stream error");
-      else res.end();
-    });
-
-    res.on("close", () => {
-      // لو العميل قفل الصفحة، اقفل الستريم
-      if (upstream?.data?.destroy) upstream.data.destroy();
-    });
 
     upstream.data.pipe(res);
   } catch (err) {
-    console.error("download proxy error:", err?.message || err);
+    console.error(
+      "download proxy error:",
+      err?.response?.status,
+      err?.message || err
+    );
     res.status(500).json({ message: "خطأ أثناء فتح الملف" });
   }
 });
