@@ -43,59 +43,66 @@ const uploadToCloudinary = (fileBuffer, options) =>
  * POST /api/study-files (Admin only)
  * form-data: file, title, type, grade?, description?
  */
-router.post("/", protect, adminOnly, upload.single("file"), async (req, res) => {
-  try {
-    const { title, type, grade, description } = req.body;
+router.post(
+  "/",
+  protect,
+  adminOnly,
+  upload.single("file"),
+  async (req, res) => {
+    try {
+      const { title, type, grade, description } = req.body;
 
-    if (!req.file) return res.status(400).json({ message: "الملف مطلوب" });
-    if (!title || !type)
-      return res.status(400).json({ message: "العنوان والنوع مطلوبان" });
+      if (!req.file) return res.status(400).json({ message: "الملف مطلوب" });
+      if (!title || !type)
+        return res.status(400).json({ message: "العنوان والنوع مطلوبان" });
 
-    if (!["plan", "schedule"].includes(type))
-      return res.status(400).json({ message: "نوع الملف غير صحيح" });
+      if (!["plan", "schedule"].includes(type))
+        return res.status(400).json({ message: "نوع الملف غير صحيح" });
 
-    const mime = req.file.mimetype || "";
-    const isPDF = mime.includes("pdf");
+      const mime = req.file.mimetype || "";
+      const isPDF = mime.includes("pdf");
 
-    const safeName = (req.file.originalname || "file")
-      .normalize("NFKD")
-      .replace(/\s+/g, "-")
-      .replace(/[^\w.-]/g, "");
+      const safeName = (req.file.originalname || "file")
+        .normalize("NFKD")
+        .replace(/\s+/g, "-")
+        .replace(/[^\w.-]/g, "");
 
-    const uploadOptions = {
-      folder: "educational-platform/study-files",
-      public_id: `${Date.now()}-${safeName}`,
-      resource_type: isPDF ? "raw" : "image",
-      use_filename: true,
-      unique_filename: true,
-      ...(isPDF ? { format: "pdf" } : {}),
-    };
+      // ✅ أهم تعديل: resource_type:auto عشان الـ PDF ينفتح في المتصفح
+      const uploadOptions = {
+        folder: "educational-platform/study-files",
+        public_id: `${Date.now()}-${safeName}`,
+        resource_type: "auto",
+        use_filename: true,
+        unique_filename: true,
+      };
 
-    const result = await uploadToCloudinary(req.file.buffer, uploadOptions);
+      const result = await uploadToCloudinary(req.file.buffer, uploadOptions);
 
-    // رابط تنزيل attachment
-    const downloadUrl = isPDF
-      ? result.secure_url.replace("/upload/", "/upload/fl_attachment/")
-      : result.secure_url;
+      // ✅ downloadUrl (اختياري) للتحميل المباشر
+      const downloadUrl = result.secure_url.replace(
+        "/upload/",
+        "/upload/fl_attachment/"
+      );
 
-    const created = await StudyFile.create({
-      title,
-      type,
-      grade: grade ? String(grade) : null,
-      description: description || "",
-      fileUrl: result.secure_url,
-      downloadUrl,
-      publicId: result.public_id,
-      fileName: req.file.originalname,
-      fileType: req.file.mimetype,
-    });
+      const created = await StudyFile.create({
+        title,
+        type,
+        grade: grade ? String(grade) : null,
+        description: description || "",
+        fileUrl: result.secure_url,
+        downloadUrl,
+        publicId: result.public_id,
+        fileName: req.file.originalname,
+        fileType: req.file.mimetype,
+      });
 
-    res.status(201).json({ message: "تم رفع الملف بنجاح", file: created });
-  } catch (err) {
-    console.error("studyFile upload error:", err);
-    res.status(500).json({ message: err?.message || "خطأ أثناء رفع الملف" });
+      res.status(201).json({ message: "تم رفع الملف بنجاح", file: created });
+    } catch (err) {
+      console.error("studyFile upload error:", err);
+      res.status(500).json({ message: err?.message || "خطأ أثناء رفع الملف" });
+    }
   }
-});
+);
 
 /**
  * GET /api/study-files?type=plan&grade=10&q=abc
@@ -145,10 +152,10 @@ router.get("/", protect, async (req, res) => {
 });
 
 /**
- * ✅ Public Download via Redirect
+ * ✅ Public Download/Open via Redirect
  * GET /api/study-files/:id/download?dl=1
  *
- * مهم: هذا عام (بدون protect) عشان يشتغل من المتصفح مباشرة.
+ * عام (بدون protect) عشان يشتغل من المتصفح
  */
 router.get("/:id/download", async (req, res) => {
   try {
@@ -178,10 +185,8 @@ router.delete("/:id", protect, adminOnly, async (req, res) => {
     const doc = await StudyFile.findById(req.params.id);
     if (!doc) return res.status(404).json({ message: "الملف غير موجود" });
 
-    const isPDF = (doc.fileType || "").includes("pdf");
-    await cloudinary.uploader.destroy(doc.publicId, {
-      resource_type: isPDF ? "raw" : "image",
-    });
+    // ✅ لأننا رفعنا بـ auto: نخليه auto وقت الحذف أيضًا
+    await cloudinary.uploader.destroy(doc.publicId, { resource_type: "auto" });
 
     await StudyFile.findByIdAndDelete(req.params.id);
     res.json({ message: "تم حذف الملف بنجاح" });
