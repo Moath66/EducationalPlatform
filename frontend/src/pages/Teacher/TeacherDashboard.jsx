@@ -132,7 +132,7 @@ export default function TeacherDashboard() {
             </button>
 
             <button
-              onClick={() => (window.location.href = "/teacher/plans")}
+              onClick={() => (window.location.href = "/teacher/study-files")}
               className="px-4 py-2 bg-emerald-600 text-white rounded-lg text-sm"
             >
               📘 عرض الخطة
