@@ -37,6 +37,8 @@ app.use("/api/users", userRoutes);
 const attendanceRoutes = require("./routes/attendanceRoutes");
 app.use("/api/attendance", attendanceRoutes);
 
+console.log("✅ loading routes: studyFileRoutes");
+
 const studyFileRoutes = require("./routes/studyFileRoutes");
 app.use("/api/study-files", studyFileRoutes);
 

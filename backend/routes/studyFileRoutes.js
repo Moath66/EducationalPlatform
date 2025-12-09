@@ -1,4 +1,3 @@
-// backend/routes/studyFilesRoutes.js
 const express = require("express");
 const router = express.Router();
 
@@ -8,6 +7,8 @@ const cloudinary = require("../config/cloudinary"); // ✅ مهم
 
 const { protect, adminOnly } = require("../middleware/authMiddleware");
 const StudyFile = require("../models/StudyFile");
+
+console.log("✅ studyFileRoutes.js loaded");
 
 // Multer (Memory)
 const upload = multer({
