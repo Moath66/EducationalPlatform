@@ -23,6 +23,7 @@ export default function StudyPlans() {
   const [uploading, setUploading] = useState(false);
 
   const [previewItem, setPreviewItem] = useState(null);
+  // ما نحتاج opening بعد ما صار فتح مباشر، لكن بخليه عشان لا تتعب بالـ UI
   const [opening, setOpening] = useState(false);
 
   const fetchItems = async () => {
@@ -153,44 +154,28 @@ export default function StudyPlans() {
   const isImage = (it) => String(it.fileType || "").startsWith("image/");
   const isPdf = (it) => String(it.fileType || "").includes("pdf");
 
-  // ✅ endpoints
-  const proxyPath = (f) => `/api/study-files/${f._id}/download`;
-  const proxyDownloadPath = (f) => `/api/study-files/${f._id}/download?dl=1`;
-
-  // ✅ فتح/تحميل عبر axios (يرسل التوكن)
-  const openViaProxy = async (file, forceDownload = false) => {
-    if (!file?._id) return;
+  /**
+   * ✅ فتح/تحميل مباشر (Public)
+   * - ما فيه axios/blob
+   * - يفتح روابط Cloudinary مباشرة (fileUrl/downloadUrl)
+   */
+  const openPublic = async (file, forceDownload = false) => {
+    if (!file) return;
     try {
       setOpening(true);
 
-      const url = forceDownload ? proxyDownloadPath(file) : proxyPath(file);
-      const res = await apiClient.get(url, { responseType: "blob" });
+      const url = forceDownload
+        ? file.downloadUrl || file.fileUrl
+        : file.fileUrl || file.downloadUrl;
 
-      const contentType =
-        res.headers?.["content-type"] ||
-        file.fileType ||
-        "application/octet-stream";
-
-      const blob = new Blob([res.data], { type: contentType });
-      const blobUrl = window.URL.createObjectURL(blob);
-
-      if (forceDownload) {
-        const a = document.createElement("a");
-        a.href = blobUrl;
-        a.download = file.fileName || "file";
-        document.body.appendChild(a);
-        a.click();
-        a.remove();
-      } else {
-        window.open(blobUrl, "_blank", "noopener,noreferrer");
+      if (!url) {
+        alert("❌ رابط الملف غير موجود");
+        return;
       }
 
-      // تنظيف
-      setTimeout(() => URL.revokeObjectURL(blobUrl), 60_000);
-    } catch (e) {
-      console.log(e.response?.data || e);
-      alert(e.response?.data?.message || "❌ تعذر فتح الملف عبر البروكسي");
+      window.open(url, "_blank", "noopener,noreferrer");
     } finally {
+      // خليها بسيطة
       setOpening(false);
     }
   };
@@ -383,9 +368,9 @@ export default function StudyPlans() {
                           padding: 0,
                           cursor: "pointer",
                         }}
-                        onClick={() => openViaProxy(it, false)}
+                        onClick={() => openPublic(it, false)}
                         disabled={opening}
-                        title="فتح عبر البروكسي (مع التوكن)"
+                        title="فتح مباشر (Public)"
                       >
                         {it.fileName || "فتح"}
                       </button>
@@ -404,9 +389,9 @@ export default function StudyPlans() {
                         <button
                           type="button"
                           className="sp-btn"
-                          onClick={() => openViaProxy(it, true)}
+                          onClick={() => openPublic(it, true)}
                           disabled={opening}
-                          title="تحميل عبر البروكسي"
+                          title="تحميل مباشر (Public)"
                         >
                           تحميل
                         </button>
@@ -453,7 +438,7 @@ export default function StudyPlans() {
                 <button
                   type="button"
                   className="sp-primaryLink"
-                  onClick={() => openViaProxy(previewItem, false)}
+                  onClick={() => openPublic(previewItem, false)}
                 >
                   فتح الصورة
                 </button>
@@ -461,7 +446,7 @@ export default function StudyPlans() {
                 <button
                   type="button"
                   className="sp-primaryLink"
-                  onClick={() => openViaProxy(previewItem, false)}
+                  onClick={() => openPublic(previewItem, false)}
                 >
                   فتح الـ PDF
                 </button>
@@ -469,7 +454,7 @@ export default function StudyPlans() {
                 <button
                   type="button"
                   className="sp-primaryLink"
-                  onClick={() => openViaProxy(previewItem, false)}
+                  onClick={() => openPublic(previewItem, false)}
                 >
                   فتح الملف
                 </button>

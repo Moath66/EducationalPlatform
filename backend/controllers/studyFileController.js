@@ -1,7 +1,6 @@
 // backend/controllers/studyFileController.js
 const streamifier = require("streamifier");
-const axios = require("axios");
-const cloudinary = require("../config/cloudinary"); // ✅ مهم
+const cloudinary = require("../config/cloudinary");
 const StudyFile = require("../models/StudyFile");
 
 // Helper: upload buffer to Cloudinary
@@ -40,12 +39,13 @@ exports.createStudyFile = async (req, res) => {
       folder: "educational-platform/study-files",
       resource_type: isPDF ? "raw" : "image",
       public_id: `${Date.now()}-${safeName}`,
+      use_filename: true,
+      unique_filename: true,
       ...(isPDF ? { format: "pdf" } : {}),
     };
 
     const result = await uploadToCloudinary(req.file.buffer, uploadOptions);
 
-    // (اختياري) رابط تحميل attachment يساعد مع PDF أحيانًا
     const downloadUrl = isPDF
       ? result.secure_url.replace("/upload/", "/upload/fl_attachment/")
       : result.secure_url;
@@ -53,7 +53,7 @@ exports.createStudyFile = async (req, res) => {
     const created = await StudyFile.create({
       title,
       type,
-      grade: grade ? String(grade) : null, // ✅ مهم
+      grade: grade ? String(grade) : null,
       description: description || "",
       fileUrl: result.secure_url,
       downloadUrl,
@@ -69,7 +69,7 @@ exports.createStudyFile = async (req, res) => {
   }
 };
 
-// GET /api/study-files (Admin/Teacher/Student) - protect only
+// GET /api/study-files (protected)
 exports.getStudyFiles = async (req, res) => {
   try {
     const { type, grade, q } = req.query;
@@ -79,12 +79,8 @@ exports.getStudyFiles = async (req, res) => {
 
     const and = [];
 
-    // type
-    if (type && ["plan", "schedule"].includes(type)) {
-      and.push({ type });
-    }
+    if (type && ["plan", "schedule"].includes(type)) and.push({ type });
 
-    // search
     if (q && String(q).trim()) {
       const query = String(q).trim();
       and.push({
@@ -96,12 +92,10 @@ exports.getStudyFiles = async (req, res) => {
       });
     }
 
-    // grade rules
     if (role === "admin") {
       if (grade) and.push({ grade: String(grade) });
     } else {
       const effectiveGrade = grade ? String(grade) : userGrade;
-
       if (effectiveGrade) {
         and.push({ $or: [{ grade: null }, { grade: effectiveGrade }] });
       } else {
@@ -119,43 +113,21 @@ exports.getStudyFiles = async (req, res) => {
   }
 };
 
-// ✅ GET /api/study-files/:id/download (Proxy)
+// ✅ GET /api/study-files/:id/download (PUBLIC redirect)
 exports.downloadStudyFile = async (req, res) => {
   try {
     const doc = await StudyFile.findById(req.params.id);
     if (!doc) return res.status(404).json({ message: "الملف غير موجود" });
 
-    // نفس صلاحيات عرض الملفات
-    const role = req.user?.role;
-    const userGrade = req.user?.grade != null ? String(req.user.grade) : null;
+    const dl = String(req.query.dl || "") === "1";
+    const targetUrl =
+      dl && doc.downloadUrl ? doc.downloadUrl : doc.fileUrl || doc.downloadUrl;
 
-    if (role !== "admin") {
-      const fileGrade = doc.grade != null ? String(doc.grade) : null;
-      if (fileGrade !== null && fileGrade !== userGrade) {
-        return res.status(403).json({ message: "غير مصرح لك بفتح هذا الملف" });
-      }
+    if (!targetUrl) {
+      return res.status(400).json({ message: "رابط الملف غير موجود" });
     }
 
-    const fileUrl = doc.fileUrl;
-    if (!fileUrl)
-      return res.status(400).json({ message: "رابط الملف غير موجود" });
-
-    const upstream = await axios.get(fileUrl, { responseType: "stream" });
-
-    res.setHeader(
-      "Content-Type",
-      upstream.headers["content-type"] ||
-        doc.fileType ||
-        "application/octet-stream"
-    );
-
-    // inline للعرض (PDF)
-    res.setHeader(
-      "Content-Disposition",
-      `inline; filename="${encodeURIComponent(doc.fileName || "file")}"`
-    );
-
-    upstream.data.pipe(res);
+    return res.redirect(302, targetUrl);
   } catch (err) {
     console.error("downloadStudyFile error:", err?.message || err);
     res.status(500).json({ message: "خطأ أثناء فتح الملف" });
@@ -170,7 +142,7 @@ exports.updateStudyFile = async (req, res) => {
     const update = {};
     if (title !== undefined) update.title = title;
     if (type !== undefined) update.type = type;
-    if (grade !== undefined) update.grade = grade ? String(grade) : null; // ✅ مهم
+    if (grade !== undefined) update.grade = grade ? String(grade) : null;
     if (description !== undefined) update.description = description || "";
 
     const updated = await StudyFile.findByIdAndUpdate(req.params.id, update, {
@@ -198,7 +170,6 @@ exports.deleteStudyFile = async (req, res) => {
     });
 
     await StudyFile.findByIdAndDelete(req.params.id);
-
     res.json({ message: "تم حذف الملف بنجاح" });
   } catch (err) {
     console.error("deleteStudyFile error:", err);
