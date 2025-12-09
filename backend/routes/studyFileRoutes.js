@@ -4,7 +4,6 @@ const router = express.Router();
 
 const multer = require("multer");
 const streamifier = require("streamifier");
-const axios = require("axios");
 const cloudinary = require("../config/cloudinary"); // ✅ مهم
 
 const { protect, adminOnly } = require("../middleware/authMiddleware");
@@ -150,14 +149,16 @@ router.get("/", protect, async (req, res) => {
 });
 
 /**
- * ✅ Proxy Download
- * GET /api/study-files/:id/download
+/**
+ * ✅ Download/Open via Redirect (أفضل من proxy على Render)
+ * GET /api/study-files/:id/download?dl=1
  */
 router.get("/:id/download", protect, async (req, res) => {
   try {
     const doc = await StudyFile.findById(req.params.id);
     if (!doc) return res.status(404).json({ message: "الملف غير موجود" });
 
+    // نفس صلاحيات عرض الملفات
     const role = req.user?.role;
     const userGrade = req.user?.grade != null ? String(req.user.grade) : null;
 
@@ -168,64 +169,27 @@ router.get("/:id/download", protect, async (req, res) => {
       }
     }
 
-    const urlPrimary = doc.downloadUrl || doc.fileUrl;
-    const urlFallback = doc.downloadUrl ? doc.fileUrl : doc.downloadUrl;
-
-    if (!urlPrimary) {
+    // اختر أفضل رابط
+    let targetUrl = doc.downloadUrl || doc.fileUrl;
+    if (!targetUrl) {
       return res.status(400).json({ message: "رابط الملف غير موجود" });
     }
 
-    const tryFetch = (url) =>
-      axios.get(url, {
-        responseType: "stream",
-        timeout: 20000,
-        maxRedirects: 5,
-        validateStatus: () => true,
-        headers: {
-          // هيدر مفيد مع بعض المزودين
-          "User-Agent": "Mozilla/5.0",
-          Accept: "*/*",
-        },
-      });
-
-    let upstream = await tryFetch(urlPrimary);
-
-    if (upstream.status >= 400 && urlFallback) {
-      upstream = await tryFetch(urlFallback);
-    }
-
-    if (upstream.status >= 400) {
-      // DEBUG مهم عشان نعرف ليش 502
-      return res.status(502).json({
-        message: `فشل جلب الملف من Cloudinary (status ${upstream.status})`,
-        tried: { urlPrimary: !!urlPrimary, urlFallback: !!urlFallback },
-      });
-    }
-
-    const contentType =
-      upstream.headers["content-type"] ||
-      doc.fileType ||
-      "application/octet-stream";
-
-    res.setHeader("Content-Type", contentType);
-    res.setHeader("X-Content-Type-Options", "nosniff");
-
+    // لو المستخدم يبغى تحميل اجباري
     const dl = String(req.query.dl || "") === "1";
-    res.setHeader(
-      "Content-Disposition",
-      `${dl ? "attachment" : "inline"}; filename="${encodeURIComponent(
-        doc.fileName || "file"
-      )}"`
-    );
+    if (dl) {
+      // لو ما كان downloadUrl جاهز، حاول نحوله
+      // (يشتغل غالبًا مع cloudinary)
+      targetUrl =
+        doc.downloadUrl ||
+        String(doc.fileUrl).replace("/upload/", "/upload/fl_attachment/");
+    }
 
-    upstream.data.pipe(res);
+    // Redirect للـ Cloudinary (المتصفح يحمل مباشرة)
+    return res.redirect(302, targetUrl);
   } catch (err) {
-    console.error(
-      "download proxy error:",
-      err?.response?.status,
-      err?.message || err
-    );
-    res.status(500).json({ message: "خطأ أثناء فتح الملف" });
+    console.error("download redirect error:", err?.message || err);
+    return res.status(500).json({ message: "خطأ أثناء فتح الملف" });
   }
 });
 
