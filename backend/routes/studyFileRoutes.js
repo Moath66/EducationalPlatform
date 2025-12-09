@@ -154,13 +154,13 @@ router.get("/", protect, async (req, res) => {
  * ✅ Download/Open via Redirect (أفضل من proxy على Render)
  * GET /api/study-files/:id/download?dl=1
  */
-// ✅ Proxy Download (NO redirect)
+// ✅ Redirect Download
 router.get("/:id/download", protect, async (req, res) => {
   try {
     const doc = await StudyFile.findById(req.params.id);
     if (!doc) return res.status(404).json({ message: "الملف غير موجود" });
 
-    // صلاحيات
+    // نفس صلاحيات عرض الملفات
     const role = req.user?.role;
     const userGrade = req.user?.grade != null ? String(req.user.grade) : null;
 
@@ -171,58 +171,19 @@ router.get("/:id/download", protect, async (req, res) => {
       }
     }
 
-    const url = doc.fileUrl; // ✅ استخدم fileUrl فقط كبداية
+    const url = doc.downloadUrl || doc.fileUrl;
     if (!url) return res.status(400).json({ message: "رابط الملف غير موجود" });
 
-    const upstream = await axios.get(url, {
-      responseType: "stream",
-      timeout: 30000,
-      maxRedirects: 5,
-      // مهم: خلي axios يرمي error لو status >= 400
-      validateStatus: (s) => s >= 200 && s < 400,
-      headers: {
-        "User-Agent": "Mozilla/5.0",
-        Accept: "*/*",
-      },
-    });
+    // لو تبي تحميل بدل عرض:
+    // استخدم ?dl=1 وخلي التحويل على downloadUrl (fl_attachment)
+    if (String(req.query.dl || "") === "1" && doc.downloadUrl) {
+      return res.redirect(doc.downloadUrl);
+    }
 
-    // content-type من cloudinary
-    const contentType =
-      upstream.headers["content-type"] ||
-      doc.fileType ||
-      "application/octet-stream";
-
-    res.setHeader("Content-Type", contentType);
-    res.setHeader("X-Content-Type-Options", "nosniff");
-
-    // inline للعرض أو attachment للتحميل
-    const dl = String(req.query.dl || "") === "1";
-    const safeFilename = encodeURIComponent(doc.fileName || "file");
-
-    res.setHeader(
-      "Content-Disposition",
-      `${dl ? "attachment" : "inline"}; filename="${safeFilename}"`
-    );
-
-    // ✅ مهم جداً مع Cloudinary/Cloudflare
-    res.setHeader("Cache-Control", "no-store");
-
-    upstream.data.on("error", (e) => {
-      console.error("upstream stream error:", e?.message || e);
-      if (!res.headersSent) res.status(502).json({ message: "فشل بث الملف" });
-      else res.end();
-    });
-
-    upstream.data.pipe(res);
+    return res.redirect(url);
   } catch (err) {
-    // لو cloudinary رجع 401/403/404 هنا نطلعها كـ 502 واضح
-    const status = err?.response?.status;
-    console.error("download proxy error:", status, err?.message || err);
-
-    return res.status(502).json({
-      message: "فشل جلب الملف من Cloudinary عبر السيرفر",
-      upstreamStatus: status || null,
-    });
+    console.error("download redirect error:", err?.message || err);
+    return res.status(500).json({ message: "خطأ أثناء فتح الملف" });
   }
 });
 
