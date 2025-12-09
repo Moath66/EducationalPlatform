@@ -1,3 +1,4 @@
+// backend/routes/studyFileRoutes.js
 const express = require("express");
 const router = express.Router();
 
@@ -41,7 +42,6 @@ const uploadToCloudinary = (fileBuffer, options) =>
 
 /**
  * POST /api/study-files (Admin only)
- * form-data: file, title, type, grade?, description?
  */
 router.post(
   "/",
@@ -60,37 +60,42 @@ router.post(
         return res.status(400).json({ message: "نوع الملف غير صحيح" });
 
       const mime = req.file.mimetype || "";
-      const isPDF = mime.includes("pdf");
+      const isPDF = mime === "application/pdf";
 
       const safeName = (req.file.originalname || "file")
         .normalize("NFKD")
         .replace(/\s+/g, "-")
         .replace(/[^\w.-]/g, "");
 
-      // ✅ أهم تعديل: resource_type:auto عشان الـ PDF ينفتح في المتصفح
       const uploadOptions = {
         folder: "educational-platform/study-files",
         public_id: `${Date.now()}-${safeName}`,
-        resource_type: "auto",
+        resource_type: isPDF ? "raw" : "image",
         use_filename: true,
         unique_filename: true,
       };
 
       const result = await uploadToCloudinary(req.file.buffer, uploadOptions);
 
-      // ✅ downloadUrl (اختياري) للتحميل المباشر
-      const downloadUrl = result.secure_url.replace(
-        "/upload/",
-        "/upload/fl_attachment/"
-      );
+      // Cloudinary transforms:
+      // raw: /upload/  -> نقدر نضيف flags
+      // fl_inline: عرض داخل المتصفح
+      // fl_attachment: تحميل
+      const viewUrl = isPDF
+        ? result.secure_url.replace("/upload/", "/upload/fl_inline/")
+        : result.secure_url;
+
+      const downloadUrl = isPDF
+        ? result.secure_url.replace("/upload/", "/upload/fl_attachment/")
+        : result.secure_url;
 
       const created = await StudyFile.create({
         title,
         type,
         grade: grade ? String(grade) : null,
         description: description || "",
-        fileUrl: result.secure_url,
-        downloadUrl,
+        fileUrl: viewUrl, // نخلي fileUrl هو رابط العرض
+        downloadUrl, // رابط التحميل
         publicId: result.public_id,
         fileName: req.file.originalname,
         fileType: req.file.mimetype,
@@ -105,8 +110,8 @@ router.post(
 );
 
 /**
- * GET /api/study-files?type=plan&grade=10&q=abc
- * Protected (لأنك تعتمد على req.user.grade و role)
+ * GET /api/study-files
+ * Protected
  */
 router.get("/", protect, async (req, res) => {
   try {
@@ -152,10 +157,8 @@ router.get("/", protect, async (req, res) => {
 });
 
 /**
- * ✅ Public Download/Open via Redirect
+ * ✅ Public redirect to Cloudinary (عام)
  * GET /api/study-files/:id/download?dl=1
- *
- * عام (بدون protect) عشان يشتغل من المتصفح
  */
 router.get("/:id/download", async (req, res) => {
   try {
@@ -163,8 +166,9 @@ router.get("/:id/download", async (req, res) => {
     if (!doc) return res.status(404).json({ message: "الملف غير موجود" });
 
     const dl = String(req.query.dl || "") === "1";
-    const targetUrl =
-      dl && doc.downloadUrl ? doc.downloadUrl : doc.fileUrl || doc.downloadUrl;
+    const targetUrl = dl
+      ? doc.downloadUrl || doc.fileUrl
+      : doc.fileUrl || doc.downloadUrl;
 
     if (!targetUrl) {
       return res.status(400).json({ message: "رابط الملف غير موجود" });
@@ -185,8 +189,10 @@ router.delete("/:id", protect, adminOnly, async (req, res) => {
     const doc = await StudyFile.findById(req.params.id);
     if (!doc) return res.status(404).json({ message: "الملف غير موجود" });
 
-    // ✅ لأننا رفعنا بـ auto: نخليه auto وقت الحذف أيضًا
-    await cloudinary.uploader.destroy(doc.publicId, { resource_type: "auto" });
+    const isPDF = (doc.fileType || "").includes("pdf");
+    await cloudinary.uploader.destroy(doc.publicId, {
+      resource_type: isPDF ? "raw" : "image",
+    });
 
     await StudyFile.findByIdAndDelete(req.params.id);
     res.json({ message: "تم حذف الملف بنجاح" });
