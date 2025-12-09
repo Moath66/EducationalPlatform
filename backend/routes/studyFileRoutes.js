@@ -155,12 +155,13 @@ router.get("/", protect, async (req, res) => {
  * GET /api/study-files/:id/download?dl=1
  */
 // ✅ Redirect Download
+// ✅ Download/Open via Redirect (أفضل من proxy على Render)
+// GET /api/study-files/:id/download?dl=1
 router.get("/:id/download", protect, async (req, res) => {
   try {
     const doc = await StudyFile.findById(req.params.id);
     if (!doc) return res.status(404).json({ message: "الملف غير موجود" });
 
-    // نفس صلاحيات عرض الملفات
     const role = req.user?.role;
     const userGrade = req.user?.grade != null ? String(req.user.grade) : null;
 
@@ -171,16 +172,16 @@ router.get("/:id/download", protect, async (req, res) => {
       }
     }
 
-    const url = doc.downloadUrl || doc.fileUrl;
-    if (!url) return res.status(400).json({ message: "رابط الملف غير موجود" });
+    // لو تبي تحميل: ?dl=1 -> يفضل downloadUrl (fl_attachment)
+    const dl = String(req.query.dl || "") === "1";
+    const targetUrl =
+      dl && doc.downloadUrl ? doc.downloadUrl : doc.fileUrl || doc.downloadUrl;
 
-    // لو تبي تحميل بدل عرض:
-    // استخدم ?dl=1 وخلي التحويل على downloadUrl (fl_attachment)
-    if (String(req.query.dl || "") === "1" && doc.downloadUrl) {
-      return res.redirect(doc.downloadUrl);
+    if (!targetUrl) {
+      return res.status(400).json({ message: "رابط الملف غير موجود" });
     }
 
-    return res.redirect(url);
+    return res.redirect(302, targetUrl);
   } catch (err) {
     console.error("download redirect error:", err?.message || err);
     return res.status(500).json({ message: "خطأ أثناء فتح الملف" });
