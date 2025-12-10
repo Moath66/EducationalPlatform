@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { fetchSessions } from "../../api/sessionsApi";
+import { fetchSessions } from "../../../api/sessionsApi";
 
 function formatAr(iso) {
   const d = new Date(iso);
