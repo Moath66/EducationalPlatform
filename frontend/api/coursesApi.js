@@ -3,11 +3,11 @@ import apiClient from "./apiClient";
 
 /**
  * Get courses list
- * @param {Object} params - optional query params (search, page, limit... حسب الباك)
+ * @param {Object} params - optional query params (q, teacherId, isActive...)
  */
 export async function fetchCourses(params = {}) {
   const res = await apiClient.get("/api/courses", { params });
-  return res.data;
+  return res.data; // غالباً { courses: [...] }
 }
 
 /**
@@ -16,7 +16,7 @@ export async function fetchCourses(params = {}) {
 export async function fetchCourseById(courseId) {
   if (!courseId) throw new Error("courseId is required");
   const res = await apiClient.get(`/api/courses/${courseId}`);
-  return res.data;
+  return res.data; // { course }
 }
 
 /**
@@ -25,31 +25,46 @@ export async function fetchCourseById(courseId) {
 export async function fetchCourseStudents(courseId) {
   if (!courseId) throw new Error("courseId is required");
   const res = await apiClient.get(`/api/courses/${courseId}/students`);
-  return res.data;
+  return res.data; // { students: [...] }
 }
 
 /**
- * (Optional) Admin: Create course
+ * Admin: Create course
  */
 export async function createCourse(payload) {
   const res = await apiClient.post("/api/courses", payload);
-  return res.data;
+  return res.data; // { message, course }
 }
 
 /**
- * (Optional) Admin: Update course
+ * Admin: Update course
  */
 export async function updateCourse(courseId, payload) {
   if (!courseId) throw new Error("courseId is required");
   const res = await apiClient.put(`/api/courses/${courseId}`, payload);
-  return res.data;
+  return res.data; // { message, course }
 }
 
 /**
- * (Optional) Admin: Delete course
+ * Admin: Delete course
  */
 export async function deleteCourse(courseId) {
   if (!courseId) throw new Error("courseId is required");
   const res = await apiClient.delete(`/api/courses/${courseId}`);
-  return res.data;
+  return res.data; // { message }
+}
+
+/**
+ * Admin/Teacher: Update course students
+ * body: { studentIds: [...] }  (استبدال القائمة)
+ */
+export async function updateCourseStudents(courseId, studentIds = []) {
+  if (!courseId) throw new Error("courseId is required");
+  if (!Array.isArray(studentIds)) {
+    throw new Error("studentIds must be an array");
+  }
+  const res = await apiClient.put(`/api/courses/${courseId}/students`, {
+    studentIds,
+  });
+  return res.data; // { message, courseId, students }
 }
