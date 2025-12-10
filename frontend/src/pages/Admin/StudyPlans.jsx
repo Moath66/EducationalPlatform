@@ -159,11 +159,11 @@ export default function StudyPlans() {
    * - ما فيه axios/blob
    * - يفتح روابط Cloudinary مباشرة (fileUrl/downloadUrl)
    */
+  const API_BASE = import.meta.env.VITE_API_BASE_URL;
+
   const openPublic = (file, forceDownload = false) => {
     if (!file?._id) return;
-    const base = import.meta.env.VITE_API_BASE_URL || "";
-    // مثال: https://educationalplatform-zwvt.onrender.com
-    const url = `${base}/api/study-files/${file._id}/download${
+    const url = `${API_BASE}/api/study-files/${file._id}/download${
       forceDownload ? "?dl=1" : ""
     }`;
     window.open(url, "_blank", "noopener,noreferrer");
