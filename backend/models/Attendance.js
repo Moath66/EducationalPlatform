@@ -17,27 +17,35 @@ const attendanceSchema = new mongoose.Schema(
       index: true,
     },
 
+    // نخزن courseId كـ denormalization (يسهّل تقارير)
+    courseId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "Course",
+      required: true,
+      index: true,
+    },
+
     status: {
       type: String,
-      enum: ["present", "absent", "late", "excused"],
+      enum: ["present", "absent"],
       default: "absent",
       index: true,
     },
 
+    note: { type: String, trim: true, default: "" },
+
     markedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",
-      required: true,
+      default: null,
     },
 
-    markedAt: { type: Date, default: Date.now },
-
-    note: { type: String, trim: true, default: "" },
+    markedAt: { type: Date, default: null },
   },
   { timestamps: true }
 );
 
-// ✅ يمنع تكرار نفس الطالب لنفس الجلسة
+// ✅ يمنع تكرار حضور نفس الطالب لنفس الجلسة
 attendanceSchema.index({ sessionId: 1, studentId: 1 }, { unique: true });
 
 module.exports = mongoose.model("Attendance", attendanceSchema);
