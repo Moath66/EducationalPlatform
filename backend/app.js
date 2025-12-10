@@ -28,6 +28,9 @@ app.use((req, res, next) => {
 });
 
 // Routes
+const courseRoutes = require("./routes/courseRoutes");
+app.use("/api/courses", courseRoutes);
+
 const authRoutes = require("./routes/authRoutes");
 app.use("/api/auth", authRoutes);
 
@@ -50,6 +53,9 @@ console.log("✅ loading routes: sessionRoutes");
 
 const sessionRoutes = require("./routes/sessionRoutes");
 app.use("/api/sessions", sessionRoutes);
+
+const profileRoutes = require("./routes/profileRoutes");
+app.use("/api/profile", profileRoutes);
 
 // Test
 app.get("/", (req, res) => {

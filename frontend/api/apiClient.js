@@ -1,11 +1,16 @@
-// frontend/src/api/apiClient.js
+// frontend/api/apiClient.js
 import axios from "axios";
 
+// ✅ خذ الرابط من env أولاً، وإذا ما موجود استخدم الافتراضي
+const BASE_URL = (
+  import.meta.env.VITE_API_URL ||
+  "https://educationalplatform-zwvt.onrender.com"
+).replace(/\/$/, "");
+
 const apiClient = axios.create({
-  baseURL: "https://educationalplatform-zwvt.onrender.com",
-  // لو تحب تثبّت /api هنا بدل ما تكتبها بكل مكان:
-  // baseURL: "https://educationalplatform-zwvt.onrender.com/api",
+  baseURL: BASE_URL,
   withCredentials: false,
+  timeout: 20000, // ✅ مهم: يمنع التعليق
 });
 
 // ✅ Token لكل الطلبات
@@ -13,13 +18,11 @@ apiClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem("token");
 
-    // مهم: تأكد headers موجودة
     config.headers = config.headers || {};
 
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     } else {
-      // اختياري: امسح الهيدر لو ما فيه توكن
       delete config.headers.Authorization;
     }
 
@@ -28,7 +31,7 @@ apiClient.interceptors.request.use(
   (error) => Promise.reject(error)
 );
 
-// ✅ توحيد رسالة الأخطاء
+// ✅ توحيد الأخطاء: نخليها Error(message) واضح
 apiClient.interceptors.response.use(
   (res) => res,
   (error) => {
@@ -37,8 +40,11 @@ apiClient.interceptors.response.use(
       error?.response?.data?.error ||
       error?.message ||
       "Request failed";
+
     console.log("API ERROR:", msg, error?.response?.data);
-    return Promise.reject(error);
+
+    // ✅ رجّع Error موحّد
+    return Promise.reject(new Error(msg));
   }
 );
 

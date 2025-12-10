@@ -1,21 +1,22 @@
 const express = require("express");
 const router = express.Router();
-const Attendance = require("../models/Attendance");
 
-router.get("/student/:id", async (req, res) => {
-  try {
-    const records = await Attendance.find({ studentId: req.params.id })
-      .populate("courseId", "name");
+const attendanceController = require("../controllers/attendanceController");
+const authMiddleware = require("../middleware/authMiddleware");
 
-    const formatted = records.map((rec) => ({
-      ...rec._doc,
-      courseName: rec.courseId?.name || "Course",
-    }));
+// حضور جلسة
+router.get(
+  "/session/:sessionId",
+  authMiddleware,
+  attendanceController.getAttendanceBySession
+);
+router.post(
+  "/session/:sessionId",
+  authMiddleware,
+  attendanceController.saveAttendanceForSession
+);
 
-    res.json({ attendance: formatted });
-  } catch (err) {
-    res.status(500).json({ message: err.message });
-  }
-});
+// حضور الطالب نفسه
+router.get("/student/me", authMiddleware, attendanceController.getMyAttendance);
 
 module.exports = router;

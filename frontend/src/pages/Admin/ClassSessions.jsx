@@ -9,6 +9,9 @@ import {
   updateSession,
 } from "../../../api/sessionsApi";
 
+import { fetchCourses } from "../../../api/coursesApi";
+import { fetchTeachers } from "../../../api/usersApi";
+
 const STATUS_LABEL = {
   scheduled: "مجدولة",
   live: "مباشر",
@@ -24,15 +27,11 @@ const STATUS_BADGE = {
 };
 
 function toLocalInputValue(date) {
-  // يحول Date/ISO إلى صيغة مناسبة لـ input datetime-local
   const d = new Date(date);
   const pad = (n) => String(n).padStart(2, "0");
-  const yyyy = d.getFullYear();
-  const mm = pad(d.getMonth() + 1);
-  const dd = pad(d.getDate());
-  const hh = pad(d.getHours());
-  const min = pad(d.getMinutes());
-  return `${yyyy}-${mm}-${dd}T${hh}:${min}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
+    d.getHours()
+  )}:${pad(d.getMinutes())}`;
 }
 
 function formatAr(iso) {
@@ -47,6 +46,16 @@ function formatAr(iso) {
   });
 }
 
+function normalizeList(data) {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data.users)) return data.users;
+  if (Array.isArray(data.teachers)) return data.teachers;
+  if (Array.isArray(data.courses)) return data.courses;
+  if (Array.isArray(data.data)) return data.data;
+  return [];
+}
+
 export default function ClassSessions() {
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -56,12 +65,17 @@ export default function ClassSessions() {
   const [q, setQ] = useState("");
   const [status, setStatus] = useState("all");
 
-  // modal state
+  // modal
   const [open, setOpen] = useState(false);
   const [mode, setMode] = useState("create"); // create | edit
   const [activeId, setActiveId] = useState(null);
 
-  // form state
+  // dropdown data
+  const [courses, setCourses] = useState([]);
+  const [teachers, setTeachers] = useState([]);
+  const [loadingMeta, setLoadingMeta] = useState(false);
+
+  // form
   const [form, setForm] = useState({
     title: "",
     courseId: "",
@@ -73,33 +87,35 @@ export default function ClassSessions() {
     notes: "",
   });
 
-  async function load() {
-    setLoading(true);
-    setErr("");
-    try {
-      const data = await fetchSessions({
-        q: q.trim(),
-        status: status === "all" ? "" : status,
-        limit: 50,
-        sort: "-startAt",
-      });
-      setSessions(data.sessions || []);
-    } catch (e) {
-      setErr(e.message || "فشل تحميل الجلسات");
-    } finally {
-      setLoading(false);
-    }
+ async function loadSessions() {
+  setLoading(true);
+  setErr("");
+  try {
+    const data = await fetchSessions({
+      q: q.trim(),
+      status: status === "all" ? "" : status,
+      limit: 50,
+      sort: "-startAt",
+    });
+
+    const list = Array.isArray(data) ? data : data.sessions || [];
+    setSessions(list);
+  } catch (e) {
+    setErr(e.message || "فشل تحميل الجلسات");
+  } finally {
+    setLoading(false);
   }
+}
+
 
   useEffect(() => {
-    load();
+    loadSessions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [status]);
 
   const stats = useMemo(() => {
     const now = new Date();
     const todayStr = now.toDateString();
-
     const today = sessions.filter(
       (s) => new Date(s.startAt).toDateString() === todayStr
     ).length;
@@ -108,7 +124,6 @@ export default function ClassSessions() {
     ).length;
     const ended = sessions.filter((s) => s.status === "ended").length;
     const noMeet = sessions.filter((s) => !(s.meetUrl || "").trim()).length;
-
     return { today, upcoming, ended, noMeet };
   }, [sessions]);
 
@@ -137,7 +152,24 @@ export default function ClassSessions() {
     });
   }, [sessions, q]);
 
-  function openCreate() {
+  async function loadMeta() {
+    setLoadingMeta(true);
+    setErr("");
+    try {
+      const [cData, tData] = await Promise.all([
+        fetchCourses(),
+        fetchTeachers(),
+      ]);
+      setCourses(normalizeList(cData));
+      setTeachers(normalizeList(tData));
+    } catch (e) {
+      setErr(e.message || "فشل تحميل الكورسات/المعلمين");
+    } finally {
+      setLoadingMeta(false);
+    }
+  }
+
+  async function openCreate() {
     setMode("create");
     setActiveId(null);
     setForm({
@@ -151,11 +183,13 @@ export default function ClassSessions() {
       notes: "",
     });
     setOpen(true);
+    await loadMeta();
   }
 
-  function openEdit(session) {
+  async function openEdit(session) {
     setMode("edit");
     setActiveId(session._id || session.id);
+
     setForm({
       title: session.title || "",
       courseId: session.courseId?._id || session.courseId || "",
@@ -166,45 +200,50 @@ export default function ClassSessions() {
       status: session.status || "scheduled",
       notes: session.notes || "",
     });
+
     setOpen(true);
+    await loadMeta();
   }
 
   function closeModal() {
     setOpen(false);
   }
 
+  function onChangeCourse(courseId) {
+    setForm((p) => ({ ...p, courseId }));
+
+    // auto-fill teacher from course if present
+    const c = courses.find((x) => (x._id || x.id) === courseId);
+    const tId = c?.teacherId?._id || c?.teacherId || "";
+    if (tId) setForm((p) => ({ ...p, teacherId: tId }));
+  }
+
   async function onSubmit(e) {
     e.preventDefault();
     setErr("");
 
-    // validation بسيط
     if (!form.title.trim()) return setErr("اكتب اسم الجلسة.");
-    if (!form.courseId.trim()) return setErr("اختر/اكتب courseId (حالياً ID).");
-    if (!form.teacherId.trim())
-      return setErr("اختر/اكتب teacherId (حالياً ID).");
+    if (!form.courseId) return setErr("اختر كورس.");
+    if (!form.teacherId) return setErr("اختر معلم.");
     if (!form.startAt) return setErr("حدد التاريخ والوقت.");
-    if (!form.durationMinutes || Number(form.durationMinutes) < 10)
-      return setErr("المدة غير صحيحة.");
 
     const payload = {
       title: form.title.trim(),
-      courseId: form.courseId.trim(),
-      teacherId: form.teacherId.trim(),
+      courseId: form.courseId,
+      teacherId: form.teacherId,
       startAt: new Date(form.startAt).toISOString(),
-      durationMinutes: Number(form.durationMinutes),
-      meetUrl: form.meetUrl.trim(),
+      durationMinutes: Number(form.durationMinutes) || 60,
+      meetUrl: (form.meetUrl || "").trim(),
       status: form.status,
-      notes: form.notes.trim(),
+      notes: (form.notes || "").trim(),
     };
 
     try {
-      if (mode === "create") {
-        await createSession(payload);
-      } else {
-        await updateSession(activeId, payload);
-      }
+      if (mode === "create") await createSession(payload);
+      else await updateSession(activeId, payload);
+
       setOpen(false);
-      await load();
+      await loadSessions();
     } catch (e2) {
       setErr(e2.message || "فشل حفظ الجلسة");
     }
@@ -217,7 +256,7 @@ export default function ClassSessions() {
 
     try {
       await deleteSession(id);
-      await load();
+      await loadSessions();
     } catch (e) {
       setErr(e.message || "فشل حذف الجلسة");
     }
@@ -226,15 +265,7 @@ export default function ClassSessions() {
   async function copy(text) {
     try {
       await navigator.clipboard.writeText(text);
-    } catch {
-      // fallback بسيط
-      const ta = document.createElement("textarea");
-      ta.value = text;
-      document.body.appendChild(ta);
-      ta.select();
-      document.execCommand("copy");
-      document.body.removeChild(ta);
-    }
+    } catch {}
   }
 
   return (
@@ -244,14 +275,14 @@ export default function ClassSessions() {
           <div>
             <h2 className="cs-title">إدارة جلسات الفصول</h2>
             <p className="cs-subtitle">
-              أنشئ الجلسات، حدّث الروابط، وتابع الحالة بسهولة.
+              اختر كورس/معلم من القائمة بدل إدخال IDs يدويًا.
             </p>
           </div>
 
           <div className="cs-actions">
             <button
               className="btn btn--ghost"
-              onClick={load}
+              onClick={loadSessions}
               disabled={loading}
             >
               تحديث
@@ -262,7 +293,6 @@ export default function ClassSessions() {
           </div>
         </div>
 
-        {/* Stats */}
         <div className="cs-stats">
           <div className="stat">
             <div className="stat__label">جلسات اليوم</div>
@@ -282,7 +312,6 @@ export default function ClassSessions() {
           </div>
         </div>
 
-        {/* Filters */}
         <div className="cs-filters">
           <div className="field">
             <label>بحث</label>
@@ -308,7 +337,7 @@ export default function ClassSessions() {
             <label>&nbsp;</label>
             <button
               className="btn btn--secondary"
-              onClick={load}
+              onClick={loadSessions}
               disabled={loading}
             >
               تطبيق / تحديث النتائج
@@ -318,7 +347,6 @@ export default function ClassSessions() {
 
         {err ? <div className="cs-alert">{err}</div> : null}
 
-        {/* Table */}
         <div className="cs-card">
           <div className="cs-card__head">
             <div className="cs-card__title">قائمة الجلسات</div>
@@ -353,12 +381,11 @@ export default function ClassSessions() {
                 {filtered.map((s) => {
                   const id = s._id || s.id;
                   const courseName =
-                    s.courseId?.name || s.courseId?.title || s.courseId || "—";
+                    s.courseId?.name || s.courseId?.title || "—";
                   const teacherName =
                     s.teacherId?.name ||
                     s.teacherId?.fullName ||
                     s.teacherId?.email ||
-                    s.teacherId ||
                     "—";
 
                   return (
@@ -369,20 +396,16 @@ export default function ClassSessions() {
                           المدة: {s.durationMinutes} دقيقة
                         </div>
                       </td>
-
                       <td>{courseName}</td>
                       <td>{teacherName}</td>
-
                       <td>
                         <div className="cellTitle">{formatAr(s.startAt)}</div>
                       </td>
-
                       <td>
                         <span className={STATUS_BADGE[s.status] || "badge"}>
                           {STATUS_LABEL[s.status] || s.status}
                         </span>
                       </td>
-
                       <td>
                         {s.meetUrl ? (
                           <div className="meetCell">
@@ -405,7 +428,6 @@ export default function ClassSessions() {
                           <span className="muted">—</span>
                         )}
                       </td>
-
                       <td>
                         <div className="rowActions">
                           <button
@@ -440,14 +462,12 @@ export default function ClassSessions() {
                     {mode === "create" ? "إضافة جلسة" : "تعديل جلسة"}
                   </div>
                   <div className="cs-modal__sub">
-                    املأ البيانات الأساسية للجلسة.
+                    {loadingMeta
+                      ? "جاري تحميل الكورسات والمعلمين..."
+                      : "اختر كورس ومعلم من القوائم."}
                   </div>
                 </div>
-                <button
-                  className="iconBtn"
-                  onClick={closeModal}
-                  aria-label="close"
-                >
+                <button className="iconBtn" onClick={closeModal}>
                   ✕
                 </button>
               </div>
@@ -481,25 +501,46 @@ export default function ClassSessions() {
                   </div>
 
                   <div className="field">
-                    <label>courseId (حالياً ID)</label>
-                    <input
+                    <label>الكورس</label>
+                    <select
                       value={form.courseId}
-                      onChange={(e) =>
-                        setForm((p) => ({ ...p, courseId: e.target.value }))
-                      }
-                      placeholder="ضع Course ID"
-                    />
+                      onChange={(e) => onChangeCourse(e.target.value)}
+                      disabled={loadingMeta}
+                    >
+                      <option value="">اختر كورس...</option>
+                      {courses.map((c) => {
+                        const id = c._id || c.id;
+                        const name = c.name || c.title || c.code || "Course";
+                        return (
+                          <option key={id} value={id}>
+                            {name}
+                          </option>
+                        );
+                      })}
+                    </select>
                   </div>
 
                   <div className="field">
-                    <label>teacherId (حالياً ID)</label>
-                    <input
+                    <label>المعلم</label>
+                    <select
                       value={form.teacherId}
                       onChange={(e) =>
                         setForm((p) => ({ ...p, teacherId: e.target.value }))
                       }
-                      placeholder="ضع Teacher ID"
-                    />
+                      disabled={loadingMeta}
+                    >
+                      <option value="">اختر معلم...</option>
+                      {teachers.map((t) => {
+                        const id = t._id || t.id;
+                        const name =
+                          t.name || t.fullName || t.email || "Teacher";
+                        return (
+                          <option key={id} value={id}>
+                            {name}
+                          </option>
+                        );
+                      })}
+                    </select>
                   </div>
 
                   <div className="field">
@@ -561,14 +602,13 @@ export default function ClassSessions() {
                   >
                     إلغاء
                   </button>
-                  <button type="submit" className="btn btn--primary">
+                  <button
+                    type="submit"
+                    className="btn btn--primary"
+                    disabled={loadingMeta}
+                  >
                     {mode === "create" ? "حفظ الجلسة" : "تحديث الجلسة"}
                   </button>
-                </div>
-
-                <div className="cs-hint">
-                  ملاحظة: حالياً courseId و teacherId تُكتب كـ ID. بعد قليل
-                  بنربطها بقائمة كورسات/معلّمين (Dropdown).
                 </div>
               </form>
             </div>

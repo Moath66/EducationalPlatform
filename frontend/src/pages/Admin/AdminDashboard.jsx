@@ -1,17 +1,53 @@
+import { useEffect, useState } from "react";
 import AdminLayout from "../../layouts/AdminLayout";
+import { fetchAdminStats } from "../../../api/adminApi";
 
 export default function AdminDashboard() {
-  // لاحقاً هنجيب الإحصائيات من الـ API
-  const stats = [
-    { label: "عدد الطلاب", value: 120, badge: "طلاب نشطين" },
-    { label: "عدد المعلمين", value: 12, badge: "معلمين مسجلين" },
-    { label: "عدد الجلسات", value: 48, badge: "جلسات هذا الأسبوع" },
-    { label: "عدد الكورسات", value: 9, badge: "كورسات مفعّلة" },
+  const [stats, setStats] = useState(null);
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setErr("");
+        setLoading(true);
+        const data = await fetchAdminStats();
+        setStats(data);
+      } catch (e) {
+        setErr(e.message || "فشل تحميل إحصائيات لوحة المشرف");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  const cards = [
+    {
+      label: "عدد الطلاب",
+      value: stats?.studentsCount ?? "—",
+      badge: "طلاب مسجلين",
+    },
+    {
+      label: "عدد المعلمين",
+      value: stats?.teachersCount ?? "—",
+      badge: "معلمين مسجلين",
+    },
+    {
+      label: "عدد الجلسات",
+      value: stats?.sessionsCount ?? "—",
+      badge: "إجمالي الجلسات",
+    },
+    {
+      label: "عدد الكورسات",
+      value: stats?.coursesCount ?? "—",
+      badge: "كورسات متاحة",
+    },
   ];
 
   return (
     <AdminLayout>
-      <div className="space-y-6">
+      <div className="space-y-6" dir="rtl">
         {/* العنوان */}
         <div>
           <h2 className="text-2xl font-bold text-slate-800">
@@ -22,9 +58,16 @@ export default function AdminDashboard() {
           </p>
         </div>
 
+        {/* Errors */}
+        {err ? (
+          <div className="bg-red-50 border border-red-200 text-red-700 rounded-xl p-3 text-sm">
+            {err}
+          </div>
+        ) : null}
+
         {/* كروت الإحصائيات */}
         <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-          {stats.map((item, idx) => (
+          {cards.map((item, idx) => (
             <div
               key={idx}
               className="bg-white rounded-xl shadow-sm border border-slate-100 p-4 flex flex-col gap-1"
@@ -32,12 +75,13 @@ export default function AdminDashboard() {
               <div className="flex items-center justify-between">
                 <span className="text-xs text-slate-500">{item.badge}</span>
                 <span className="w-6 h-6 rounded-full bg-emerald-100 flex items-center justify-center text-[10px] text-emerald-700">
-                  i
+                  {loading ? "…" : "i"}
                 </span>
               </div>
+
               <div className="mt-1">
                 <div className="text-2xl font-bold text-slate-800">
-                  {item.value}
+                  {loading ? "..." : item.value}
                 </div>
                 <div className="text-sm text-slate-600 mt-1">{item.label}</div>
               </div>
@@ -52,7 +96,8 @@ export default function AdminDashboard() {
               آخر الجداول الدراسية المرفوعة
             </h3>
             <p className="text-xs text-slate-500">
-              سيتم ربط هذه القائمة بالـ API لاحقاً لعرض أحدث الجداول والخطط.
+              لاحقاً نربطها بـ Study Files (مثل studyFileRoutes) لعرض آخر
+              الملفات.
             </p>
           </div>
 
@@ -61,8 +106,7 @@ export default function AdminDashboard() {
               إحصائيات سريعة
             </h3>
             <p className="text-xs text-slate-500">
-              يمكن لاحقاً إضافة رسم بياني بسيط لعرض عدد الجلسات خلال الأيام
-              الماضية.
+              لاحقاً نضيف رسم بياني بسيط (جلسات حسب الأيام).
             </p>
           </div>
         </div>

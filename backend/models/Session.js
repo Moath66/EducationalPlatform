@@ -21,7 +21,7 @@ const sessionSchema = new mongoose.Schema(
 
     startAt: { type: Date, required: true, index: true },
 
-    durationMinutes: { type: Number, required: true, min: 10, max: 600 },
+    durationMinutes: { type: Number, default: 60, min: 10, max: 600 },
 
     meetUrl: { type: String, trim: true, default: "" },
 
@@ -43,7 +43,8 @@ const sessionSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// بحث نصي (اختياري) يساعد على search سريع في title/notes
 sessionSchema.index({ title: "text", notes: "text" });
+sessionSchema.index({ teacherId: 1, startAt: 1 });
+sessionSchema.index({ courseId: 1, startAt: 1 });
 
 module.exports = mongoose.model("Session", sessionSchema);

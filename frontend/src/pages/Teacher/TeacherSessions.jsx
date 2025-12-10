@@ -13,12 +13,20 @@ function formatAr(iso) {
   });
 }
 
+function normalizeSessions(data) {
+  if (!data) return [];
+  if (Array.isArray(data)) return data;
+  if (Array.isArray(data.sessions)) return data.sessions;
+  return [];
+}
+
 export default function TeacherSessions() {
   const [user, setUser] = useState(null);
   const [sessions, setSessions] = useState([]);
   const [q, setQ] = useState("");
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
+  const [copied, setCopied] = useState("");
 
   useEffect(() => {
     const savedUser = JSON.parse(localStorage.getItem("user") || "null");
@@ -26,12 +34,18 @@ export default function TeacherSessions() {
   }, []);
 
   async function load(u) {
-    if (!u?._id && !u?.id) return;
+    const teacherId = u?._id || u?.id;
+    if (!teacherId) {
+      setLoading(false);
+      setSessions([]);
+      return;
+    }
+
     setLoading(true);
     setErr("");
+    setCopied("");
 
     try {
-      const teacherId = u._id || u.id;
       const nowIso = new Date().toISOString();
 
       const data = await fetchSessions({
@@ -42,9 +56,11 @@ export default function TeacherSessions() {
         sort: "startAt",
       });
 
-      setSessions(data.sessions || []);
+      const list = normalizeSessions(data);
+      setSessions(list);
     } catch (e) {
       setErr(e.message || "فشل تحميل الجلسات");
+      setSessions([]);
     } finally {
       setLoading(false);
     }
@@ -67,6 +83,17 @@ export default function TeacherSessions() {
     window.location.href = `/teacher/attendance?sessionId=${sessionId}`;
   }
 
+  async function copyMeet(meet) {
+    try {
+      await navigator.clipboard.writeText(meet);
+      setCopied("✅ تم نسخ الرابط");
+      setTimeout(() => setCopied(""), 1200);
+    } catch {
+      setCopied("❌ لم يتم النسخ");
+      setTimeout(() => setCopied(""), 1200);
+    }
+  }
+
   return (
     <div className="p-6 text-right" dir="rtl">
       <div className="flex items-start justify-between gap-3 mb-6">
@@ -85,6 +112,12 @@ export default function TeacherSessions() {
           تحديث
         </button>
       </div>
+
+      {copied ? (
+        <div className="bg-slate-50 border border-slate-200 text-slate-700 p-3 rounded-lg mb-4">
+          {copied}
+        </div>
+      ) : null}
 
       <div className="bg-white p-4 rounded-xl shadow mb-5 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
         <div className="flex-1">
@@ -107,6 +140,12 @@ export default function TeacherSessions() {
       {err ? (
         <div className="bg-rose-50 border border-rose-200 text-rose-800 p-3 rounded-lg mb-4">
           {err}
+        </div>
+      ) : null}
+
+      {!user ? (
+        <div className="bg-white p-5 rounded-xl shadow text-slate-600">
+          لا توجد بيانات مستخدم. الرجاء تسجيل الدخول مرة أخرى.
         </div>
       ) : null}
 
@@ -147,11 +186,7 @@ export default function TeacherSessions() {
                         فتح Meet
                       </a>
                       <button
-                        onClick={async () => {
-                          try {
-                            await navigator.clipboard.writeText(meet);
-                          } catch {}
-                        }}
+                        onClick={() => copyMeet(meet)}
                         className="px-4 py-2 bg-white border rounded-lg hover:bg-slate-50"
                       >
                         نسخ الرابط

@@ -1,11 +1,25 @@
 const User = require("../models/User");
 const bcrypt = require("bcryptjs");
 
-// Get All Users (Admin only)
-// Get All Users (Admin only)
+// ✅ GET /api/users/teachers (Admin only)
+exports.getTeachers = async (req, res) => {
+  try {
+    const teachers = await User.find({ role: "teacher" })
+      .select("-password")
+      .sort({ createdAt: -1 });
+
+    // نخليها متوافقة مع frontend: { users: [...] }
+    res.json({ users: teachers });
+  } catch (err) {
+    console.error("getTeachers error:", err);
+    res.status(500).json({ message: "خطأ أثناء جلب المعلمين" });
+  }
+};
+
+// ✅ GET /api/users (Admin only)
 exports.getAllUsers = async (req, res) => {
   try {
-    const { role, approved } = req.query;
+    const { role, approved, q } = req.query;
 
     const filter = {};
     if (role) filter.role = role;
@@ -13,70 +27,111 @@ exports.getAllUsers = async (req, res) => {
     if (approved === "true") filter.isApproved = true;
     if (approved === "false") filter.isApproved = false;
 
-    const users = await User.find(filter).select("-password");
+    // بحث اختياري بالاسم/الإيميل
+    if (q && q.trim()) {
+      filter.$or = [
+        { name: { $regex: q.trim(), $options: "i" } },
+        { email: { $regex: q.trim(), $options: "i" } },
+      ];
+    }
+
+    const users = await User.find(filter)
+      .select("-password")
+      .sort({ createdAt: -1 });
+
+    // خليها مثل ما عندك (Array) عشان ما نكسر صفحاتك القديمة
     res.json(users);
   } catch (err) {
+    console.error("getAllUsers error:", err);
     res.status(500).json({ message: "خطأ أثناء جلب المستخدمين" });
   }
 };
 
-// Update User
+// ✅ PUT /api/users/:id (Admin only)
 exports.updateUser = async (req, res) => {
   try {
     const { id } = req.params;
 
-    const updatedUser = await User.findByIdAndUpdate(id, req.body, {
-      new: true,
-    });
+    // حماية: لا تعدل كلمة المرور من هنا
+    const payload = { ...req.body };
+    if (payload.password) delete payload.password;
 
-    res.json({ message: "تم تحديث المستخدم", updatedUser });
+    const updatedUser = await User.findByIdAndUpdate(id, payload, {
+      new: true,
+    }).select("-password");
+
+    if (!updatedUser) {
+      return res.status(404).json({ message: "المستخدم غير موجود" });
+    }
+
+    res.json({ message: "تم تحديث المستخدم", user: updatedUser });
   } catch (err) {
+    console.error("updateUser error:", err);
     res.status(500).json({ message: "خطأ أثناء التحديث" });
   }
 };
 
-// Delete User
+// ✅ DELETE /api/users/:id (Admin only)
 exports.deleteUser = async (req, res) => {
   try {
-    await User.findByIdAndDelete(req.params.id);
+    const deleted = await User.findByIdAndDelete(req.params.id);
+    if (!deleted)
+      return res.status(404).json({ message: "المستخدم غير موجود" });
+
     res.json({ message: "تم حذف المستخدم بنجاح" });
   } catch (err) {
+    console.error("deleteUser error:", err);
     res.status(500).json({ message: "خطأ أثناء الحذف" });
   }
 };
 
+// ✅ GET /api/users/pending (Admin only)
 exports.getPendingUsers = async (req, res) => {
   try {
-    const users = await User.find({ isApproved: false }).select("-password");
+    const users = await User.find({ isApproved: false })
+      .select("-password")
+      .sort({ createdAt: -1 });
+
     res.json(users);
   } catch (err) {
+    console.error("getPendingUsers error:", err);
     res.status(500).json({ message: "خطأ أثناء جلب الطلبات" });
   }
 };
 
+// ✅ PUT /api/users/approve/:id (Admin only)
 exports.approveUser = async (req, res) => {
   try {
     const user = await User.findByIdAndUpdate(
       req.params.id,
       { isApproved: true },
       { new: true }
-    );
+    ).select("-password");
+
+    if (!user) return res.status(404).json({ message: "المستخدم غير موجود" });
 
     res.json({ message: "تمت الموافقة على المستخدم", user });
   } catch (err) {
+    console.error("approveUser error:", err);
     res.status(500).json({ message: "خطأ أثناء الموافقة" });
   }
 };
 
+// ✅ DELETE /api/users/reject/:id (Admin only)
 exports.rejectUser = async (req, res) => {
   try {
-    await User.findByIdAndDelete(req.params.id);
+    const deleted = await User.findByIdAndDelete(req.params.id);
+    if (!deleted)
+      return res.status(404).json({ message: "المستخدم غير موجود" });
+
     res.json({ message: "تم رفض المستخدم وحذف طلبه" });
   } catch (err) {
+    console.error("rejectUser error:", err);
     res.status(500).json({ message: "خطأ أثناء الرفض" });
   }
 };
 
+// ✅ POST /api/users/create-teacher (Admin only)
 exports.createTeacher = async (req, res) => {
   try {
     const { name, email, phone, password } = req.body;
@@ -97,8 +152,9 @@ exports.createTeacher = async (req, res) => {
       email,
       phone,
       password: hashedPassword,
-      role: "teacher", // ✅ معلم
-      isApproved: false, // ✅ الأدمن أضافه مباشرة (يدخل النظام)
+      role: "teacher",
+      // ✅ بما أن الأدمن هو اللي أنشأ الحساب: نخليه موافق عليه
+      isApproved: true,
     });
 
     res.status(201).json({
@@ -106,6 +162,7 @@ exports.createTeacher = async (req, res) => {
       teacher: { ...teacher.toObject(), password: undefined },
     });
   } catch (err) {
+    console.error("createTeacher error:", err);
     res.status(500).json({ message: "خطأ أثناء إنشاء حساب المعلّم" });
   }
 };

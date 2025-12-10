@@ -1,79 +1,63 @@
 // src/api/sessionsApi.js
+import apiClient from "./apiClient";
 
-const BASE_URL = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
-
-function getToken() {
-  return localStorage.getItem("token"); // غيّرها لو اسم التوكن مختلف
+/**
+ * Get sessions list
+ * params مثال:
+ * { q, status, courseId, teacherId, from, to, page, limit, sort }
+ */
+export async function fetchSessions(params = {}) {
+  const res = await apiClient.get("/api/sessions", { params });
+  return res.data; // { sessions, total, page, limit }
 }
 
-async function request(path, options = {}) {
-  const token = getToken();
-
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), 20000);
-
-  try {
-    const res = await fetch(`${BASE_URL}${path}`, {
-      ...options,
-      signal: controller.signal,
-      headers: {
-        ...(options.body ? { "Content-Type": "application/json" } : {}),
-        ...(token ? { Authorization: `Bearer ${token}` } : {}),
-        ...(options.headers || {}),
-      },
-    });
-
-    const ct = res.headers.get("content-type") || "";
-    const isJson = ct.includes("application/json");
-    const data = isJson ? await res.json() : await res.text();
-
-    if (!res.ok) {
-      const msg =
-        (data && data.message) ||
-        (typeof data === "string" && data) ||
-        `Request failed: ${res.status}`;
-      throw new Error(msg);
-    }
-
-    return data;
-  } catch (e) {
-    if (e.name === "AbortError")
-      throw new Error("انتهت مهلة الاتصال بالسيرفر (timeout).");
-    throw e;
-  } finally {
-    clearTimeout(timeout);
-  }
+export async function fetchSessionById(id) {
+  if (!id) throw new Error("session id is required");
+  const res = await apiClient.get(`/api/sessions/${id}`);
+  return res.data; // { session }
 }
 
-export function fetchSessions(params = {}) {
-  const qs = new URLSearchParams();
-  Object.entries(params).forEach(([k, v]) => {
-    if (v === undefined || v === null || v === "" || v === "all") return;
-    qs.set(k, String(v));
-  });
-
-  const query = qs.toString();
-  return request(`/api/sessions${query ? `?${query}` : ""}`, { method: "GET" });
+export async function createSession(payload) {
+  const res = await apiClient.post("/api/sessions", payload);
+  return res.data; // { message, session }
 }
 
-export function createSession(payload) {
-  return request("/api/sessions", {
-    method: "POST",
-    body: JSON.stringify(payload),
+export async function updateSession(id, payload) {
+  if (!id) throw new Error("session id is required");
+  const res = await apiClient.put(`/api/sessions/${id}`, payload);
+  return res.data; // { message, session }
+}
+
+export async function deleteSession(id) {
+  if (!id) throw new Error("session id is required");
+  const res = await apiClient.delete(`/api/sessions/${id}`);
+  return res.data; // { message }
+}
+
+/**
+ * Helpful wrappers
+ */
+export async function fetchUpcomingSessions({ limit = 50 } = {}) {
+  const nowIso = new Date().toISOString();
+  return fetchSessions({
+    from: nowIso,
+    status: "scheduled",
+    sort: "startAt",
+    limit,
   });
 }
 
-export function updateSession(id, payload) {
-  return request(`/api/sessions/${id}`, {
-    method: "PUT",
-    body: JSON.stringify(payload),
+export async function fetchTeacherUpcomingSessions(
+  teacherId,
+  { limit = 50 } = {}
+) {
+  if (!teacherId) throw new Error("teacherId is required");
+  const nowIso = new Date().toISOString();
+  return fetchSessions({
+    teacherId,
+    from: nowIso,
+    status: "scheduled",
+    sort: "startAt",
+    limit,
   });
-}
-
-export function deleteSession(id) {
-  return request(`/api/sessions/${id}`, { method: "DELETE" });
-}
-
-export function fetchSessionById(id) {
-  return request(`/api/sessions/${id}`, { method: "GET" });
 }

@@ -10,17 +10,19 @@ const {
   deleteSession,
 } = require("../controllers/sessionController");
 
-const { protect } = require("../middleware/authMiddleware");
+const { protect, adminOnly } = require("../middleware/authMiddleware");
 
-// لو عندك authorizeRoles استخدمه، إذا ما عندك خلّها protect فقط حالياً
-// const { protect, authorizeRoles } = require("../middleware/authMiddleware");
-
-// Admin CRUD
+// ✅ List sessions (admin + teacher ممكن)
+// (في controller خلّي teacher يشوف جلساته فقط)
 router.get("/", protect, getSessions);
-router.post("/", protect, createSession);
 
+// ✅ Admin CRUD
+router.post("/", protect, adminOnly, createSession);
+router.put("/:id", protect, adminOnly, updateSession);
+router.delete("/:id", protect, adminOnly, deleteSession);
+
+// ✅ تفاصيل جلسة (admin/teacher)
+// (في controller تحقق صلاحية teacher)
 router.get("/:id", protect, getSessionById);
-router.put("/:id", protect, updateSession);
-router.delete("/:id", protect, deleteSession);
 
 module.exports = router;
