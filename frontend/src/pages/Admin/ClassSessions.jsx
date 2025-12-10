@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
 import AdminLayout from "../../layouts/AdminLayout";
-import "./ClassSessions.css";
+import "../../styles/ClassSessions.css";
 import {
   createSession,
   deleteSession,
