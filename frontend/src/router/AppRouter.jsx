@@ -11,6 +11,7 @@ import ManagePendingUser from "../pages/Admin/ManagePendingUser";
 import StudyPlans from "../pages/Admin/StudyPlans";
 import ClassSessions from "../pages/Admin/ClassSessions";
 import Settings from "../pages/Admin/Settings";
+import ManageCourses from "../pages/Admin/ManageCourses";
 
 import RequireStudent from "../middleware/RequireStudent";
 import StudentDashboard from "../pages/Student/StudentDashboard";
@@ -68,6 +69,15 @@ export default function AppRouter() {
           element={
             <RequireAdmin>
               <ManagePendingUser />
+            </RequireAdmin>
+          }
+        />
+
+        <Route
+          path="/admin/courses"
+          element={
+            <RequireAdmin>
+              <ManageCourses />
             </RequireAdmin>
           }
         />

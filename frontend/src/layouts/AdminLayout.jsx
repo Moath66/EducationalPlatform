@@ -16,6 +16,7 @@ export default function AdminLayout({ children }) {
           <AdminNavItem to="/admin/pending" label="طلبات التسجيل" />
           <AdminNavItem to="/admin/teachers" label="إدارة المعلمين" />
           <AdminNavItem to="/admin/students" label="إدارة الطلاب" />
+          <AdminNavItem to="/admin/courses" label="إدارة الكورسات" />
           <AdminNavItem to="/admin/study-plans" label="الخطط والجداول" />
           <AdminNavItem to="/admin/sessions" label="جلسات الفصول" />
           <AdminNavItem to="/admin/settings" label="إعدادات المنصة" />
