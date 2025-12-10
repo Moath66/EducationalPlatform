@@ -23,6 +23,7 @@ import TeacherDashboard from "../pages/Teacher/TeacherDashboard";
 import TeacherAttendance from "../pages/Teacher/TeacherAttendance";
 import TeacherSchedule from "../pages/Teacher/TeacherSchedule";
 import TeacherStudyFiles from "../pages/Teacher/TeacherStudyFiles";
+import TeacherSessions from "../pages/Teacher/TeacherSessions";
 
 export default function AppRouter() {
   return (
@@ -165,6 +166,15 @@ export default function AppRouter() {
           element={
             <RequireTeacher>
               <TeacherStudyFiles />
+            </RequireTeacher>
+          }
+        />
+
+        <Route
+          path="/teacher/sessions"
+          element={
+            <RequireTeacher>
+              <TeacherSessions />
             </RequireTeacher>
           }
         />

@@ -46,6 +46,11 @@ app.use("/api/study-files", studyFileRoutes);
 
 app.use("/uploads", express.static("uploads"));
 
+console.log("✅ loading routes: sessionRoutes");
+
+const sessionRoutes = require("./routes/sessionRoutes");
+app.use("/api/sessions", sessionRoutes);
+
 // Test
 app.get("/", (req, res) => {
   res.send("API Working ✔");
