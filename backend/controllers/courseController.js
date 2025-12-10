@@ -2,6 +2,8 @@
 const Course = require("../models/Course");
 const User = require("../models/User");
 
+const isNonEmptyString = (v) => typeof v === "string" && v.trim().length > 0;
+
 /**
  * GET /api/courses
  * Admin: كل الكورسات
@@ -14,7 +16,6 @@ exports.getCourses = async (req, res) => {
     const filter = {};
 
     // فلترة حسب صلاحية المستخدم (اختياري لكنه مفيد)
-    // لو تحب تخليها للأدمن فقط، احذف هذا الجزء
     if (req.user?.role === "teacher") {
       filter.teacherId = req.user.id;
     }
@@ -44,10 +45,9 @@ exports.getCourses = async (req, res) => {
  */
 exports.getCourseById = async (req, res) => {
   try {
-    const course = await Course.findById(req.params.id).populate(
-      "teacherId",
-      "name email role"
-    );
+    const course = await Course.findById(req.params.id)
+      .populate("teacherId", "name email role")
+      .populate("students", "name email phone grade role");
 
     if (!course) return res.status(404).json({ message: "Course not found" });
 
@@ -65,17 +65,15 @@ exports.getCourseById = async (req, res) => {
 exports.getCourseStudents = async (req, res) => {
   try {
     const course = await Course.findById(req.params.id).select(
-      "students title"
+      "students title teacherId"
     );
     if (!course) return res.status(404).json({ message: "Course not found" });
 
-    // (اختياري) صلاحيات: المعلم يشوف طلاب كورسه فقط
+    // صلاحيات: المعلم يشوف طلاب كورسه فقط
     if (req.user?.role === "teacher") {
-      const owns = await Course.exists({
-        _id: course._id,
-        teacherId: req.user.id,
-      });
-      if (!owns) return res.status(403).json({ message: "Not allowed" });
+      if (String(course.teacherId) !== String(req.user.id)) {
+        return res.status(403).json({ message: "Not allowed" });
+      }
     }
 
     const students = await User.find({
@@ -96,9 +94,10 @@ exports.getCourseStudents = async (req, res) => {
  */
 exports.createCourse = async (req, res) => {
   try {
-    const { title, description, teacherId, coverImage, students } = req.body;
+    const { title, description, teacherId, coverImage, students, isActive } =
+      req.body;
 
-    if (!title?.trim())
+    if (!isNonEmptyString(title))
       return res.status(400).json({ message: "title is required" });
     if (!teacherId)
       return res.status(400).json({ message: "teacherId is required" });
@@ -110,10 +109,11 @@ exports.createCourse = async (req, res) => {
 
     const course = await Course.create({
       title: title.trim(),
-      description: (description || "").trim(),
+      description: isNonEmptyString(description) ? description.trim() : "",
       teacherId,
       coverImage: coverImage || "",
       students: Array.isArray(students) ? students : [],
+      isActive: typeof isActive === "boolean" ? isActive : true,
     });
 
     res.status(201).json({ message: "Course created", course });
@@ -134,7 +134,7 @@ exports.updateCourse = async (req, res) => {
     const course = await Course.findById(req.params.id);
     if (!course) return res.status(404).json({ message: "Course not found" });
 
-    // (اختياري) صلاحيات المعلم
+    // صلاحيات المعلم
     if (
       req.user?.role === "teacher" &&
       String(course.teacherId) !== String(req.user.id)
@@ -142,11 +142,20 @@ exports.updateCourse = async (req, res) => {
       return res.status(403).json({ message: "Not allowed" });
     }
 
-    if (title !== undefined) course.title = title.trim();
-    if (description !== undefined)
-      course.description = (description || "").trim();
+    if (title !== undefined) {
+      if (!isNonEmptyString(title)) {
+        return res.status(400).json({ message: "title cannot be empty" });
+      }
+      course.title = title.trim();
+    }
+
+    if (description !== undefined) {
+      course.description = isNonEmptyString(description) ? description.trim() : "";
+    }
+
     if (coverImage !== undefined) course.coverImage = coverImage || "";
-    if (isActive !== undefined) course.isActive = !!isActive;
+
+    if (isActive !== undefined) course.isActive = Boolean(isActive);
 
     if (teacherId !== undefined) {
       const teacher = await User.findById(teacherId);
@@ -199,16 +208,22 @@ exports.updateCourseStudents = async (req, res) => {
       return res.status(403).json({ message: "Not allowed" });
     }
 
+    // helper: normalize array of ids -> strings unique
+    const normalizeIds = (arr) =>
+      Array.from(
+        new Set((Array.isArray(arr) ? arr : []).map((x) => String(x)).filter(Boolean))
+      );
+
     if (Array.isArray(studentIds)) {
-      course.students = studentIds;
+      course.students = normalizeIds(studentIds);
     } else {
       if (Array.isArray(add)) {
         const set = new Set(course.students.map(String));
-        add.forEach((id) => set.add(String(id)));
+        normalizeIds(add).forEach((id) => set.add(id));
         course.students = Array.from(set);
       }
       if (Array.isArray(remove)) {
-        const rm = new Set(remove.map(String));
+        const rm = new Set(normalizeIds(remove));
         course.students = course.students.filter((id) => !rm.has(String(id)));
       }
     }

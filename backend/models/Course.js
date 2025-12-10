@@ -13,14 +13,8 @@ const courseSchema = new mongoose.Schema(
       index: true,
     },
 
-    // ✅ أهم إضافة لربط الطالب بالكورس (حتى نجيب جلساته وحضوره)
-    students: [
-      {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: "User",
-        index: true,
-      },
-    ],
+    // ✅ ربط الطلاب بالكورس
+    students: [{ type: mongoose.Schema.Types.ObjectId, ref: "User" }],
 
     coverImage: { type: String, default: "" },
 
@@ -29,6 +23,10 @@ const courseSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
+// indexes
 courseSchema.index({ teacherId: 1, title: 1 });
+courseSchema.index({ students: 1 }); // ✅ مفيد لو بتبحث بكورس يحتوي طالب
+// اختياري لو ودك search أقوى
+// courseSchema.index({ title: "text", description: "text" });
 
 module.exports = mongoose.model("Course", courseSchema);

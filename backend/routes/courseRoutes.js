@@ -1,27 +1,29 @@
+// backend/routes/courseRoutes.js
 const express = require("express");
 const router = express.Router();
 
 const courseController = require("../controllers/courseController");
-const authMiddleware = require("../middleware/authMiddleware");
+const { protect, adminOnly } = require("../middleware/authMiddleware");
 
 // قائمة الكورسات
-router.get("/", authMiddleware, courseController.getCourses);
+router.get("/", protect, courseController.getCourses);
 
 // تفاصيل كورس
-router.get("/:id", authMiddleware, courseController.getCourseById);
+router.get("/:id", protect, courseController.getCourseById);
 
 // طلاب كورس
-router.get("/:id/students", authMiddleware, courseController.getCourseStudents);
+router.get("/:id/students", protect, courseController.getCourseStudents);
 
-// CRUD (اختياري للأدمن)
-router.post("/", authMiddleware, courseController.createCourse);
-router.put("/:id", authMiddleware, courseController.updateCourse);
-router.delete("/:id", authMiddleware, courseController.deleteCourse);
+// CRUD (للأدمن)
+router.post("/", protect, adminOnly, courseController.createCourse);
+router.put("/:id", protect, adminOnly, courseController.updateCourse);
+router.delete("/:id", protect, adminOnly, courseController.deleteCourse);
 
-// تحديث طلاب الكورس (اختياري)
+// تحديث طلاب الكورس
 router.put(
   "/:id/students",
-  authMiddleware,
+  protect,
+  adminOnly,
   courseController.updateCourseStudents
 );
 
