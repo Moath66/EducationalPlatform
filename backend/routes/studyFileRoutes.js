@@ -1,4 +1,3 @@
-// backend/routes/studyFileRoutes.js
 const express = require("express");
 const router = express.Router();
 
@@ -40,76 +39,89 @@ const uploadToCloudinary = (fileBuffer, options) =>
     streamifier.createReadStream(fileBuffer).pipe(stream);
   });
 
+// ✅ helper: build proper PDF urls (raw/upload) + optional attachment
+const buildPdfUrls = (secureUrl) => {
+  // secureUrl should already be .../raw/upload/...
+  // inline view:
+  const inlineUrl = secureUrl.replace("/raw/upload/", "/raw/upload/fl_inline/");
+  // forced download:
+  const downloadUrl = secureUrl.replace(
+    "/raw/upload/",
+    "/raw/upload/fl_attachment/"
+  );
+  return { inlineUrl, downloadUrl };
+};
+
 /**
  * POST /api/study-files (Admin only)
- * رفع ملف جديد
+ * form-data: file, title, type, grade?, description?
  */
-router.post(
-  "/",
-  protect,
-  adminOnly,
-  upload.single("file"),
-  async (req, res) => {
-    try {
-      const { title, type, grade, description } = req.body;
+router.post("/", protect, adminOnly, upload.single("file"), async (req, res) => {
+  try {
+    const { title, type, grade, description } = req.body;
 
-      if (!req.file) return res.status(400).json({ message: "الملف مطلوب" });
-      if (!title || !type)
-        return res.status(400).json({ message: "العنوان والنوع مطلوبان" });
+    if (!req.file) return res.status(400).json({ message: "الملف مطلوب" });
+    if (!title || !type)
+      return res.status(400).json({ message: "العنوان والنوع مطلوبان" });
 
-      if (!["plan", "schedule"].includes(type))
-        return res.status(400).json({ message: "نوع الملف غير صحيح" });
+    if (!["plan", "schedule"].includes(type))
+      return res.status(400).json({ message: "نوع الملف غير صحيح" });
 
-      const mime = req.file.mimetype || "";
-      const isPDF = mime === "application/pdf";
+    const mime = req.file.mimetype || "";
+    const isPDF = mime.includes("pdf");
 
-      const safeName = (req.file.originalname || "file")
-        .normalize("NFKD")
-        .replace(/\s+/g, "-")
-        .replace(/[^\w.-]/g, "");
+    const safeName = (req.file.originalname || "file")
+      .normalize("NFKD")
+      .replace(/\s+/g, "-")
+      .replace(/[^\w.-]/g, "");
 
-      const uploadOptions = {
-        folder: "educational-platform/study-files",
-        public_id: `${Date.now()}-${safeName}`,
-        resource_type: isPDF ? "raw" : "image",
-        use_filename: true,
-        unique_filename: true,
-      };
+    const uploadOptions = {
+      folder: "educational-platform/study-files",
+      public_id: `${Date.now()}-${safeName}`,
+      resource_type: isPDF ? "raw" : "image",
+      use_filename: true,
+      unique_filename: true,
+      ...(isPDF ? { format: "pdf" } : {}),
+    };
 
-      const result = await uploadToCloudinary(req.file.buffer, uploadOptions);
+    const result = await uploadToCloudinary(req.file.buffer, uploadOptions);
 
-      // ✅ روابط Cloudinary مع flags للتحكم بالعرض/التحميل
-      const viewUrl = isPDF
-        ? result.secure_url.replace("/upload/", "/upload/fl_inline/")
-        : result.secure_url;
+    let fileUrl = result.secure_url;
+    let downloadUrl = "";
 
-      const downloadUrl = isPDF
-        ? result.secure_url.replace("/upload/", "/upload/fl_attachment/")
-        : result.secure_url;
-
-      const created = await StudyFile.create({
-        title,
-        type,
-        grade: grade ? String(grade) : null,
-        description: description || "",
-        fileUrl: viewUrl, // رابط العرض (يفتح في المتصفح)
-        downloadUrl, // رابط التحميل
-        publicId: result.public_id,
-        fileName: req.file.originalname,
-        fileType: req.file.mimetype,
-      });
-
-      res.status(201).json({ message: "تم رفع الملف بنجاح", file: created });
-    } catch (err) {
-      console.error("studyFile upload error:", err);
-      res.status(500).json({ message: err?.message || "خطأ أثناء رفع الملف" });
+    if (isPDF) {
+      // ✅ enforce correct raw/upload urls + transforms placement
+      // sometimes secure_url already contains raw/upload - good
+      // build inline & download using the correct pattern
+      const { inlineUrl, downloadUrl: dlUrl } = buildPdfUrls(fileUrl);
+      fileUrl = inlineUrl;
+      downloadUrl = dlUrl;
+    } else {
+      downloadUrl = fileUrl;
     }
+
+    const created = await StudyFile.create({
+      title,
+      type,
+      grade: grade ? String(grade) : null,
+      description: description || "",
+      fileUrl,
+      downloadUrl,
+      publicId: result.public_id,
+      fileName: req.file.originalname,
+      fileType: req.file.mimetype,
+    });
+
+    res.status(201).json({ message: "تم رفع الملف بنجاح", file: created });
+  } catch (err) {
+    console.error("studyFile upload error:", err);
+    res.status(500).json({ message: err?.message || "خطأ أثناء رفع الملف" });
   }
-);
+});
 
 /**
- * GET /api/study-files
- * جلب قائمة الملفات (محمي)
+ * GET /api/study-files?type=plan&grade=10&q=abc
+ * Protected (لأنك تعتمد على req.user.grade و role)
  */
 router.get("/", protect, async (req, res) => {
   try {
@@ -120,10 +132,8 @@ router.get("/", protect, async (req, res) => {
 
     const and = [];
 
-    // فلتر النوع
     if (type && ["plan", "schedule"].includes(type)) and.push({ type });
 
-    // فلتر البحث
     if (q && String(q).trim()) {
       const query = String(q).trim();
       and.push({
@@ -135,12 +145,9 @@ router.get("/", protect, async (req, res) => {
       });
     }
 
-    // فلتر الصف/المرحلة
     if (role === "admin") {
-      // المشرف يشوف كل شيء
       if (grade) and.push({ grade: String(grade) });
     } else {
-      // المعلم/الطالب يشوف ملفات صفه + الملفات العامة (grade: null)
       const effectiveGrade = grade ? String(grade) : userGrade;
       if (effectiveGrade) {
         and.push({ $or: [{ grade: null }, { grade: effectiveGrade }] });
@@ -160,28 +167,22 @@ router.get("/", protect, async (req, res) => {
 });
 
 /**
- * ✅ GET /api/study-files/:id/download
- * فتح/تحميل الملف (عام - بدون حماية)
- * ?dl=1 للتحميل المباشر
+ * ✅ Public Download/Open via Redirect
+ * GET /api/study-files/:id/download?dl=1
  */
 router.get("/:id/download", async (req, res) => {
   try {
     const doc = await StudyFile.findById(req.params.id);
-    if (!doc) {
-      return res.status(404).json({ message: "الملف غير موجود" });
-    }
+    if (!doc) return res.status(404).json({ message: "الملف غير موجود" });
 
-    // إذا dl=1 يستخدم downloadUrl، غير كذا viewUrl
-    const wantsDownload = String(req.query.dl || "") === "1";
-    const targetUrl = wantsDownload
-      ? doc.downloadUrl || doc.fileUrl
-      : doc.fileUrl || doc.downloadUrl;
+    const dl = String(req.query.dl || "") === "1";
+    const targetUrl =
+      dl && doc.downloadUrl ? doc.downloadUrl : doc.fileUrl || doc.downloadUrl;
 
     if (!targetUrl) {
       return res.status(400).json({ message: "رابط الملف غير موجود" });
     }
 
-    // ✅ Redirect مباشر لـ Cloudinary
     return res.redirect(302, targetUrl);
   } catch (err) {
     console.error("download redirect error:", err?.message || err);
@@ -190,54 +191,19 @@ router.get("/:id/download", async (req, res) => {
 });
 
 /**
- * PUT /api/study-files/:id
- * تحديث بيانات الملف (Admin only)
- */
-router.put("/:id", protect, adminOnly, async (req, res) => {
-  try {
-    const { title, type, grade, description } = req.body;
-
-    const update = {};
-    if (title !== undefined) update.title = title;
-    if (type !== undefined) update.type = type;
-    if (grade !== undefined) update.grade = grade ? String(grade) : null;
-    if (description !== undefined) update.description = description || "";
-
-    const updated = await StudyFile.findByIdAndUpdate(req.params.id, update, {
-      new: true,
-    });
-
-    if (!updated) {
-      return res.status(404).json({ message: "الملف غير موجود" });
-    }
-
-    res.json({ message: "تم تحديث بيانات الملف", file: updated });
-  } catch (err) {
-    console.error("studyFile update error:", err);
-    res.status(500).json({ message: "خطأ أثناء تحديث الملف" });
-  }
-});
-
-/**
- * DELETE /api/study-files/:id
- * حذف الملف (Admin only)
+ * DELETE /api/study-files/:id (Admin only)
  */
 router.delete("/:id", protect, adminOnly, async (req, res) => {
   try {
     const doc = await StudyFile.findById(req.params.id);
-    if (!doc) {
-      return res.status(404).json({ message: "الملف غير موجود" });
-    }
+    if (!doc) return res.status(404).json({ message: "الملف غير موجود" });
 
-    // حذف من Cloudinary
     const isPDF = (doc.fileType || "").includes("pdf");
     await cloudinary.uploader.destroy(doc.publicId, {
       resource_type: isPDF ? "raw" : "image",
     });
 
-    // حذف من قاعدة البيانات
     await StudyFile.findByIdAndDelete(req.params.id);
-
     res.json({ message: "تم حذف الملف بنجاح" });
   } catch (err) {
     console.error("studyFile delete error:", err);

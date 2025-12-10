@@ -164,17 +164,14 @@ export default function StudyPlans() {
     setOpening(true);
 
     // ✅ استخدام fileUrl من Cloudinary مباشرة إذا كان موجود
-    if (file.fileUrl) {
-      window.open(file.fileUrl, "_blank", "noopener,noreferrer");
-      setOpening(false);
-      return;
-    }
-
-    // ✅ أو استخدام endpoint من الـ backend (بدون undefined)
-    const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
-    const url = `${API_BASE}/api/study-files/${file._id}/download${
-      forceDownload ? "?dl=1" : ""
-    }`;
+    const openPublic = (file, forceDownload = false) => {
+      if (!file?._id) return;
+      const base = `${import.meta.env.VITE_API_URL || ""}/api/study-files/${
+        file._id
+      }/download`;
+      const url = forceDownload ? `${base}?dl=1` : base;
+      window.open(url, "_blank", "noopener,noreferrer");
+    };
 
     window.open(url, "_blank", "noopener,noreferrer");
 
