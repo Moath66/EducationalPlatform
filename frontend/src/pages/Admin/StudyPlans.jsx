@@ -25,6 +25,10 @@ export default function StudyPlans() {
   const [previewItem, setPreviewItem] = useState(null);
   const [opening, setOpening] = useState(false);
 
+  const API_BASE =
+    import.meta.env.VITE_API_URL ||
+    "https://educationalplatform-zwvt.onrender.com";
+
   const fetchItems = async () => {
     try {
       setLoading(true);
@@ -154,28 +158,22 @@ export default function StudyPlans() {
   const isPdf = (it) => String(it.fileType || "").includes("pdf");
 
   /**
-   * ✅ فتح/تحميل مباشر - التعديل الجديد
-   * - إزالة undefined من المسار
-   * - استخدام fileUrl من Cloudinary مباشرة
+   * ✅ فتح/تحميل مباشر عن طريق Redirect في الباك اند
+   * - ما فيه axios/blob
+   * - ما فيه url undefined
    */
-  const openPublic = (file, forceDownload = false) => {
+  const openPublicRedirect = (file, forceDownload = false) => {
     if (!file?._id) return;
 
-    setOpening(true);
-
-    // ✅ استخدام fileUrl من Cloudinary مباشرة إذا كان موجود
-    const openPublic = (file, forceDownload = false) => {
-      if (!file?._id) return;
-      const base = `${import.meta.env.VITE_API_URL || ""}/api/study-files/${
-        file._id
-      }/download`;
-      const url = forceDownload ? `${base}?dl=1` : base;
+    try {
+      setOpening(true);
+      const url = `${API_BASE}/api/study-files/${file._id}/download${
+        forceDownload ? "?dl=1" : ""
+      }`;
       window.open(url, "_blank", "noopener,noreferrer");
-    };
-
-    window.open(url, "_blank", "noopener,noreferrer");
-
-    setTimeout(() => setOpening(false), 500);
+    } finally {
+      setTimeout(() => setOpening(false), 400);
+    }
   };
 
   return (
@@ -368,7 +366,7 @@ export default function StudyPlans() {
                           color: "#0066cc",
                           textDecoration: "underline",
                         }}
-                        onClick={() => openPublic(it, false)}
+                        onClick={() => openPublicRedirect(it, false)}
                         disabled={opening}
                         title="فتح الملف"
                       >
@@ -381,16 +379,15 @@ export default function StudyPlans() {
                         <button
                           type="button"
                           className="sp-btn sp-btnView"
-                          onClick={() => openPublic(it, false)}
-                          disabled={opening}
+                          onClick={() => setPreviewItem(it)}
                         >
-                          {opening ? "..." : "معاينة"}
+                          معاينة
                         </button>
 
                         <button
                           type="button"
                           className="sp-btn"
-                          onClick={() => openPublic(it, true)}
+                          onClick={() => openPublicRedirect(it, true)}
                           disabled={opening}
                           title="تحميل الملف"
                         >
@@ -446,7 +443,7 @@ export default function StudyPlans() {
                     <button
                       type="button"
                       className="sp-primaryLink"
-                      onClick={() => openPublic(previewItem, false)}
+                      onClick={() => openPublicRedirect(previewItem, false)}
                     >
                       فتح في تبويب جديد
                     </button>
@@ -454,31 +451,22 @@ export default function StudyPlans() {
                 </div>
               ) : isPdf(previewItem) ? (
                 <div style={{ textAlign: "center" }}>
-                  <iframe
-                    src={previewItem.fileUrl}
-                    style={{
-                      width: "100%",
-                      height: "70vh",
-                      border: "1px solid #ddd",
-                      borderRadius: "8px",
-                    }}
-                    title={previewItem.title}
-                  />
-                  <div style={{ marginTop: "1rem" }}>
-                    <button
-                      type="button"
-                      className="sp-primaryLink"
-                      onClick={() => openPublic(previewItem, false)}
-                    >
-                      فتح في تبويب جديد
-                    </button>
-                  </div>
+                  <p style={{ marginBottom: "12px" }}>
+                    معاينة PDF داخل الصفحة قد تفشل حسب المتصفح/Cloudinary.
+                  </p>
+                  <button
+                    type="button"
+                    className="sp-primaryLink"
+                    onClick={() => openPublicRedirect(previewItem, false)}
+                  >
+                    فتح الـ PDF في تبويب جديد
+                  </button>
                 </div>
               ) : (
                 <button
                   type="button"
                   className="sp-primaryLink"
-                  onClick={() => openPublic(previewItem, false)}
+                  onClick={() => openPublicRedirect(previewItem, false)}
                 >
                   فتح الملف
                 </button>
