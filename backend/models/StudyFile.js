@@ -7,8 +7,16 @@ const studyFileSchema = new mongoose.Schema(
     type: { type: String, enum: ["plan", "schedule"], required: true },
     grade: { type: String, default: null },
 
+    // ✅ جديد: لمن هذا الملف؟
+    audience: {
+      type: String,
+      enum: ["all", "teacher", "student"],
+      default: "all",
+      index: true,
+    },
+
     fileUrl: { type: String, required: true },
-    downloadUrl: { type: String, default: "" }, // ✅ جديد
+    downloadUrl: { type: String, default: "" },
     publicId: { type: String, required: true },
 
     fileName: { type: String },

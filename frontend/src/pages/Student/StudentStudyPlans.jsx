@@ -2,22 +2,22 @@ import { useEffect, useMemo, useState } from "react";
 import apiClient from "../../../api/apiClient"; // src/api/apiClient.js
 
 export default function StudentStudyPlans() {
-  const [user, setUser] = useState(null);
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    const savedUser = JSON.parse(localStorage.getItem("user"));
-    setUser(savedUser || null);
-  }, []);
+  // نفس فكرة Admin: نخليها ثابتة وآمنة
+  const API_BASE =
+    import.meta.env.VITE_API_URL ||
+    "https://educationalplatform-zwvt.onrender.com";
 
   const fetchPlans = async () => {
     try {
       setLoading(true);
 
-      // ✅ نطلب الخطط فقط، ولا نرسل grade من الفرونت
+      // ✅ للطالب: اطلب "plan" فقط
+      // الباك اند بنفسه بيطبق:
+      // audience in (all, student) + grade (null أو grade حق الطالب)
       const res = await apiClient.get("/api/study-files", {
         params: { type: "plan" },
       });
@@ -31,11 +31,11 @@ export default function StudentStudyPlans() {
     }
   };
 
+  // ✅ لا تعتمد على localStorage user. اعتمد على التوكن فقط.
   useEffect(() => {
-    if (!user) return; // مهم عشان التوكن يكون موجود
     fetchPlans();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, []);
 
   const normalizedSearch = search.trim().toLowerCase();
 
@@ -56,15 +56,14 @@ export default function StudentStudyPlans() {
     });
   }, [files, normalizedSearch]);
 
-  // ✅ رابط البروكسي (يحل مشاكل فتح PDF/401/CORS)
-  const fileProxyUrl = (f) =>
-    `${apiClient.defaults.baseURL}/api/study-files/${f._id}/download`;
-
-  const fileProxyDownloadUrl = (f) =>
-    `${apiClient.defaults.baseURL}/api/study-files/${f._id}/download?dl=1`;
+  // ✅ Redirect العام من الباك اند (أفضل)
+  const fileRedirectUrl = (f, forceDownload = false) =>
+    `${API_BASE}/api/study-files/${f._id}/download${
+      forceDownload ? "?dl=1" : ""
+    }`;
 
   const openFile = (f) => {
-    window.open(fileProxyUrl(f), "_blank", "noopener,noreferrer");
+    window.open(fileRedirectUrl(f, false), "_blank", "noopener,noreferrer");
   };
 
   return (
@@ -74,15 +73,8 @@ export default function StudentStudyPlans() {
         <div>
           <h1 className="text-3xl font-bold">الخطة الدراسية 📚</h1>
           <p className="text-sm text-gray-600 mt-1">
-            هنا تجد ملفات الخطة الدراسية الخاصة بصفّك (وأيضاً الملفات العامة).
+            هنا تجد ملفات الخطة الدراسية الخاصة بك والملفات العامة.
           </p>
-
-          {user?.grade ? (
-            <p className="text-xs text-gray-500 mt-1">
-              يتم عرض ملفات الصف:{" "}
-              <span className="font-semibold">{user.grade}</span>
-            </p>
-          ) : null}
         </div>
 
         <button
@@ -132,6 +124,7 @@ export default function StudentStudyPlans() {
               >
                 <div>
                   <p className="font-bold text-gray-800">{f.title}</p>
+
                   {f.description ? (
                     <p className="text-sm text-gray-600 mt-1">
                       {f.description}
@@ -162,7 +155,7 @@ export default function StudentStudyPlans() {
                   </button>
 
                   <a
-                    href={fileProxyDownloadUrl(f)}
+                    href={fileRedirectUrl(f, true)}
                     target="_blank"
                     rel="noreferrer"
                     className="px-4 py-2 rounded-lg bg-slate-200 text-slate-800 hover:bg-slate-300 transition"
@@ -177,7 +170,7 @@ export default function StudentStudyPlans() {
       </div>
 
       <p className="text-xs text-gray-400 text-center mt-6">
-        * يتم جلب الملفات من السيرفر حسب صلاحيات المستخدم.
+        * يتم جلب الملفات من السيرفر حسب صلاحيات المستخدم (audience + grade).
       </p>
     </div>
   );

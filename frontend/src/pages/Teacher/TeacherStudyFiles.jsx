@@ -2,17 +2,15 @@ import { useEffect, useMemo, useState } from "react";
 import apiClient from "../../../api/apiClient";
 
 export default function TeacherStudyPlans() {
-  const [user, setUser] = useState(null);
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
 
   const TYPE = "plan"; // ✅ ثابت: خطة فقط
   const [search, setSearch] = useState("");
 
-  useEffect(() => {
-    const savedUser = JSON.parse(localStorage.getItem("user"));
-    setUser(savedUser || null);
-  }, []);
+  const API_BASE =
+    import.meta.env.VITE_API_URL ||
+    "https://educationalplatform-zwvt.onrender.com";
 
   const fetchFiles = async () => {
     try {
@@ -20,8 +18,7 @@ export default function TeacherStudyPlans() {
 
       const res = await apiClient.get("/api/study-files", {
         params: { type: TYPE },
-        // ✅ لا ترسل grade من الفرونت
-        // خلي الباك يطبق role + req.user.grade
+        // ✅ لا ترسل grade من الفرونت — السيرفر يطبق role + grade + audience
       });
 
       setFiles(Array.isArray(res.data) ? res.data : []);
@@ -34,11 +31,11 @@ export default function TeacherStudyPlans() {
     }
   };
 
+  // ✅ لا تعتمد على user من localStorage (مو ضروري)
   useEffect(() => {
-    if (!user) return;
     fetchFiles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user]);
+  }, []);
 
   const normalizedSearch = search.trim().toLowerCase();
 
@@ -59,17 +56,11 @@ export default function TeacherStudyPlans() {
     });
   }, [files, normalizedSearch]);
 
-  // ✅ Proxy URL (حل فتح PDF/CORS/401)
-  const fileProxyUrl = (f) =>
-    `${apiClient.defaults.baseURL}/api/study-files/${f._id}/download`;
-
-  const fileProxyDownloadUrl = (f) =>
-    `${apiClient.defaults.baseURL}/api/study-files/${f._id}/download?dl=1`;
-
-  const openFile = (f) => {
-    if (!f?._id) return;
-    window.open(fileProxyUrl(f), "_blank", "noopener,noreferrer");
-  };
+  // ✅ Redirect العام من الباك اند (بدون axios/blob وبدون baseURL undefined)
+  const fileRedirectUrl = (f, forceDownload = false) =>
+    `${API_BASE}/api/study-files/${f._id}/download${
+      forceDownload ? "?dl=1" : ""
+    }`;
 
   return (
     <div className="p-6 text-right" dir="rtl">
@@ -78,7 +69,7 @@ export default function TeacherStudyPlans() {
         <div>
           <h1 className="text-3xl font-bold">📘 الخطط الدراسية</h1>
           <p className="text-slate-500 text-sm mt-1">
-            هنا تشوف الخطط الدراسية المرفوعة من الإدارة — حسب صلاحيتك/صفّك.
+            هنا تشوف الخطط الدراسية المرفوعة من الإدارة — حسب صلاحيتك.
           </p>
         </div>
 
@@ -100,13 +91,6 @@ export default function TeacherStudyPlans() {
             placeholder="ابحث بالعنوان أو الوصف أو اسم الملف..."
             className="mt-1 w-full border rounded-lg px-3 py-2 outline-none focus:ring-2 focus:ring-emerald-400"
           />
-        </div>
-
-        <div className="min-w-[180px]">
-          <label className="text-sm text-slate-600">صفّك</label>
-          <div className="mt-1 w-full border rounded-lg px-3 py-2 bg-slate-50 text-slate-700">
-            {user?.grade || "غير محدد"}
-          </div>
         </div>
 
         <button
@@ -150,16 +134,17 @@ export default function TeacherStudyPlans() {
                 </div>
 
                 <div className="flex gap-2 justify-end">
-                  <button
-                    onClick={() => openFile(f)}
+                  <a
+                    href={fileRedirectUrl(f, false)}
+                    target="_blank"
+                    rel="noreferrer"
                     className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700 transition"
-                    type="button"
                   >
                     فتح
-                  </button>
+                  </a>
 
                   <a
-                    href={fileProxyDownloadUrl(f)}
+                    href={fileRedirectUrl(f, true)}
                     target="_blank"
                     rel="noreferrer"
                     className="px-4 py-2 rounded-lg bg-slate-200 text-slate-800 hover:bg-slate-300 transition"

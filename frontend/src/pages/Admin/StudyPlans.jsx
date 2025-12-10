@@ -11,12 +11,14 @@ export default function StudyPlans() {
   const [typeFilter, setTypeFilter] = useState("all");
   const [gradeFilter, setGradeFilter] = useState("all");
   const [search, setSearch] = useState("");
+  const [audienceFilter, setAudienceFilter] = useState("all"); // ✅ NEW
 
   // upload form
   const [form, setForm] = useState({
     title: "",
     type: "plan",
     grade: "",
+    audience: "all", // ✅ NEW (all | teacher | student)
     description: "",
     file: null,
   });
@@ -55,6 +57,11 @@ export default function StudyPlans() {
       const matchesGrade =
         gradeFilter === "all" ? true : String(it.grade) === String(gradeFilter);
 
+      const matchesAudience =
+        audienceFilter === "all"
+          ? true
+          : String(it.audience || "all") === String(audienceFilter);
+
       const matchesSearch =
         !q ||
         String(it.title || "")
@@ -67,9 +74,9 @@ export default function StudyPlans() {
           .toLowerCase()
           .includes(q);
 
-      return matchesType && matchesGrade && matchesSearch;
+      return matchesType && matchesGrade && matchesAudience && matchesSearch;
     });
-  }, [items, typeFilter, gradeFilter, search]);
+  }, [items, typeFilter, gradeFilter, audienceFilter, search]);
 
   const grades = useMemo(() => {
     const s = new Set(
@@ -117,6 +124,7 @@ export default function StudyPlans() {
       fd.append("title", form.title);
       fd.append("type", form.type);
       if (form.grade) fd.append("grade", form.grade);
+      fd.append("audience", form.audience || "all"); // ✅ NEW
       if (form.description) fd.append("description", form.description);
       fd.append("file", form.file);
 
@@ -127,6 +135,7 @@ export default function StudyPlans() {
         title: "",
         type: "plan",
         grade: "",
+        audience: "all",
         description: "",
         file: null,
       });
@@ -154,13 +163,16 @@ export default function StudyPlans() {
 
   const badgeLabel = (t) => (t === "plan" ? "خطة" : "جدول");
   const typeLabel = (t) => (t === "plan" ? "خطة دراسية" : "جدول دراسي");
-  const isImage = (it) => String(it.fileType || "").startsWith("image/");
-  const isPdf = (it) => String(it.fileType || "").includes("pdf");
+
+  const audienceLabel = (a) => {
+    const v = String(a || "all");
+    if (v === "teacher") return "للمعلم";
+    if (v === "student") return "للطالب";
+    return "للجميع";
+  };
 
   /**
    * ✅ فتح/تحميل مباشر عن طريق Redirect في الباك اند
-   * - ما فيه axios/blob
-   * - ما فيه url undefined
    */
   const openPublicRedirect = (file, forceDownload = false) => {
     if (!file?._id) return;
@@ -232,6 +244,22 @@ export default function StudyPlans() {
                 }
                 placeholder="مثال: 10 أو Grade 10"
               />
+            </label>
+
+            {/* ✅ NEW audience select */}
+            <label className="sp-field">
+              <span className="sp-label">يوصل لـ</span>
+              <select
+                className="sp-input"
+                value={form.audience}
+                onChange={(e) =>
+                  setForm((p) => ({ ...p, audience: e.target.value }))
+                }
+              >
+                <option value="all">الجميع</option>
+                <option value="teacher">المعلم</option>
+                <option value="student">الطالب</option>
+              </select>
             </label>
 
             <label className="sp-field sp-span2">
@@ -313,6 +341,18 @@ export default function StudyPlans() {
             </option>
           ))}
         </select>
+
+        {/* ✅ NEW filter */}
+        <select
+          className="sp-select"
+          value={audienceFilter}
+          onChange={(e) => setAudienceFilter(e.target.value)}
+          title="فلترة حسب المستلم"
+        >
+          <option value="all">الكل</option>
+          <option value="teacher">للمعلم</option>
+          <option value="student">للطالب</option>
+        </select>
       </div>
 
       {/* List */}
@@ -334,6 +374,7 @@ export default function StudyPlans() {
                   <th>العنوان</th>
                   <th>النوع</th>
                   <th>المرحلة</th>
+                  <th>المستلم</th>
                   <th>الملف</th>
                   <th className="sp-thActions">إجراءات</th>
                 </tr>
@@ -353,6 +394,7 @@ export default function StudyPlans() {
 
                     <td>{typeLabel(it.type)}</td>
                     <td>{it.grade || "-"}</td>
+                    <td>{audienceLabel(it.audience)}</td>
 
                     <td className="sp-fileCell">
                       <button
@@ -419,7 +461,8 @@ export default function StudyPlans() {
               <div>
                 <h4 className="sp-modalTitle">{previewItem.title}</h4>
                 <p className="sp-modalMeta">
-                  {typeLabel(previewItem.type)} • {previewItem.grade || "-"}
+                  {typeLabel(previewItem.type)} • {previewItem.grade || "-"} •{" "}
+                  {audienceLabel(previewItem.audience)}
                 </p>
               </div>
               <button
@@ -432,45 +475,13 @@ export default function StudyPlans() {
             </div>
 
             <div className="sp-modalBody">
-              {isImage(previewItem) ? (
-                <div style={{ textAlign: "center" }}>
-                  <img
-                    src={previewItem.fileUrl}
-                    alt={previewItem.title}
-                    style={{ maxWidth: "100%", maxHeight: "70vh" }}
-                  />
-                  <div style={{ marginTop: "1rem" }}>
-                    <button
-                      type="button"
-                      className="sp-primaryLink"
-                      onClick={() => openPublicRedirect(previewItem, false)}
-                    >
-                      فتح في تبويب جديد
-                    </button>
-                  </div>
-                </div>
-              ) : isPdf(previewItem) ? (
-                <div style={{ textAlign: "center" }}>
-                  <p style={{ marginBottom: "12px" }}>
-                    معاينة PDF داخل الصفحة قد تفشل حسب المتصفح/Cloudinary.
-                  </p>
-                  <button
-                    type="button"
-                    className="sp-primaryLink"
-                    onClick={() => openPublicRedirect(previewItem, false)}
-                  >
-                    فتح الـ PDF في تبويب جديد
-                  </button>
-                </div>
-              ) : (
-                <button
-                  type="button"
-                  className="sp-primaryLink"
-                  onClick={() => openPublicRedirect(previewItem, false)}
-                >
-                  فتح الملف
-                </button>
-              )}
+              <button
+                type="button"
+                className="sp-primaryLink"
+                onClick={() => openPublicRedirect(previewItem, false)}
+              >
+                فتح في تبويب جديد
+              </button>
             </div>
           </div>
         </div>

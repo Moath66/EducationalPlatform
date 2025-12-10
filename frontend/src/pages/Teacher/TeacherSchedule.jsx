@@ -3,27 +3,23 @@ import { useEffect, useMemo, useState } from "react";
 import apiClient from "../../../api/apiClient";
 
 export default function TeacherSchedule() {
-  const [user, setUser] = useState(null);
-
   const TYPE = "schedule"; // ✅ صفحة المعلم للجداول فقط
 
   const [grade, setGrade] = useState(""); // فلتر اختياري يدوي
   const [files, setFiles] = useState([]);
   const [loading, setLoading] = useState(true);
-
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    const savedUser = JSON.parse(localStorage.getItem("user"));
-    setUser(savedUser || null);
-  }, []);
+  const API_BASE =
+    import.meta.env.VITE_API_URL ||
+    "https://educationalplatform-zwvt.onrender.com";
 
   const queryString = useMemo(() => {
     const params = new URLSearchParams();
     params.set("type", TYPE);
 
     const g = String(grade || "").trim();
-    if (g) params.set("grade", g); // اختياري فقط
+    if (g) params.set("grade", g); // اختياري للمعلم فقط (الباك يسمح)
 
     return params.toString();
   }, [grade]);
@@ -33,7 +29,12 @@ export default function TeacherSchedule() {
       setError("");
       setLoading(true);
 
-      const res = await apiClient.get(`/api/study-files?${queryString}`);
+      // ✅ خله params بدل تركيب سترنق (أوضح وأأمن)
+      const params = { type: TYPE };
+      const g = String(grade || "").trim();
+      if (g) params.grade = g;
+
+      const res = await apiClient.get("/api/study-files", { params });
       setFiles(Array.isArray(res.data) ? res.data : []);
     } catch (err) {
       console.log(err.response?.data || err);
@@ -44,23 +45,17 @@ export default function TeacherSchedule() {
     }
   };
 
+  // ✅ لا تحتاج user من localStorage
   useEffect(() => {
-    if (!user) return; // مهم عشان التوكن
     fetchFiles();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [user, queryString]);
+  }, [queryString]);
 
-  // ✅ رابط البروكسي (حل فتح PDF + 401/CORS)
-  const fileProxyUrl = (f) =>
-    `${apiClient.defaults.baseURL}/api/study-files/${f._id}/download`;
-
-  const fileProxyDownloadUrl = (f) =>
-    `${apiClient.defaults.baseURL}/api/study-files/${f._id}/download?dl=1`;
-
-  const openFile = (f) => {
-    if (!f?._id) return;
-    window.open(fileProxyUrl(f), "_blank", "noopener,noreferrer");
-  };
+  // ✅ Redirect العام من الباك (يفتح PDF/صور بدون blob/axios)
+  const fileRedirectUrl = (f, forceDownload = false) =>
+    `${API_BASE}/api/study-files/${f._id}/download${
+      forceDownload ? "?dl=1" : ""
+    }`;
 
   const isPDF = (mime, url) => {
     if (mime?.includes("pdf")) return true;
@@ -159,10 +154,10 @@ export default function TeacherSchedule() {
                   </span>
                 </div>
 
-                {/* Preview (صورة فقط) — عبر proxy */}
+                {/* Preview (صورة فقط) */}
                 {!isPDF(f.fileType, f.fileUrl) && (
                   <img
-                    src={fileProxyUrl(f)}
+                    src={fileRedirectUrl(f, false)}
                     alt={f.title}
                     className="w-full max-h-64 object-contain rounded-lg bg-gray-50 border"
                     loading="lazy"
@@ -170,15 +165,17 @@ export default function TeacherSchedule() {
                 )}
 
                 <div className="flex gap-2 justify-end">
-                  <button
-                    onClick={() => openFile(f)}
+                  <a
+                    href={fileRedirectUrl(f, false)}
+                    target="_blank"
+                    rel="noreferrer"
                     className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm hover:bg-teal-700"
                   >
                     فتح
-                  </button>
+                  </a>
 
                   <a
-                    href={fileProxyDownloadUrl(f)}
+                    href={fileRedirectUrl(f, true)}
                     target="_blank"
                     rel="noreferrer"
                     className="px-4 py-2 rounded-lg bg-slate-200 text-slate-800 hover:bg-slate-300 transition"

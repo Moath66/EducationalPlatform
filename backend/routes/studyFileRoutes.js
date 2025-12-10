@@ -1,3 +1,4 @@
+// backend/routes/studyFileRoutes.js
 const express = require("express");
 const router = express.Router();
 
@@ -39,10 +40,12 @@ const uploadToCloudinary = (fileBuffer, options) =>
     streamifier.createReadStream(fileBuffer).pipe(stream);
   });
 
-// ✅ helper: build proper PDF urls (raw/upload) + optional attachment
+/**
+ * ✅ helper: PDF download URL (attachment)
+ * input:  https://res.cloudinary.com/<cloud>/raw/upload/v123/.../file.pdf
+ * output: https://res.cloudinary.com/<cloud>/raw/upload/fl_attachment/v123/.../file.pdf
+ */
 const buildPdfUrls = (secureUrl) => {
-  // input: https://res.cloudinary.com/<cloud>/raw/upload/v123/folder/file.pdf
-  // output: https://res.cloudinary.com/<cloud>/raw/upload/fl_attachment/v123/folder/file.pdf
   const downloadUrl = secureUrl.replace(
     "/raw/upload/",
     "/raw/upload/fl_attachment/"
@@ -50,9 +53,12 @@ const buildPdfUrls = (secureUrl) => {
   return { downloadUrl };
 };
 
+// ✅ audience allowed values
+const ALLOWED_AUDIENCE = ["all", "teacher", "student"];
+
 /**
  * POST /api/study-files (Admin only)
- * form-data: file, title, type, grade?, description?
+ * form-data: file, title, type, grade?, description?, audience?
  */
 router.post(
   "/",
@@ -61,7 +67,7 @@ router.post(
   upload.single("file"),
   async (req, res) => {
     try {
-      const { title, type, grade, description } = req.body;
+      const { title, type, grade, description, audience } = req.body;
 
       if (!req.file) return res.status(400).json({ message: "الملف مطلوب" });
       if (!title || !type)
@@ -69,6 +75,12 @@ router.post(
 
       if (!["plan", "schedule"].includes(type))
         return res.status(400).json({ message: "نوع الملف غير صحيح" });
+
+      // ✅ sanitize audience from form-data
+      const aud = String(audience || "")
+        .trim()
+        .toLowerCase();
+      const finalAudience = ALLOWED_AUDIENCE.includes(aud) ? aud : "all";
 
       const mime = req.file.mimetype || "";
       const isPDF = mime.includes("pdf");
@@ -81,7 +93,7 @@ router.post(
       const uploadOptions = {
         folder: "educational-platform/study-files",
         public_id: `${Date.now()}-${safeName}`,
-        resource_type: isPDF ? "auto" : "image", // ✅ أهم تغيير
+        resource_type: isPDF ? "auto" : "image", // ✅ PDF يشتغل مع auto
         use_filename: true,
         unique_filename: true,
       };
@@ -91,15 +103,22 @@ router.post(
       const fileUrl = result.secure_url;
 
       // ✅ تحميل (attachment) للـ PDF
-      const downloadUrl = isPDF
-        ? result.secure_url.replace("/upload/", "/upload/fl_attachment/")
-        : result.secure_url;
+      let downloadUrl = fileUrl;
+      if (isPDF) {
+        if (fileUrl.includes("/raw/upload/")) {
+          downloadUrl = buildPdfUrls(fileUrl).downloadUrl;
+        } else {
+          // fallback لو طلع /upload/
+          downloadUrl = fileUrl.replace("/upload/", "/upload/fl_attachment/");
+        }
+      }
 
       const created = await StudyFile.create({
         title,
         type,
         grade: grade ? String(grade) : null,
         description: description || "",
+        audience: finalAudience, // ✅ جديد
         fileUrl,
         downloadUrl,
         publicId: result.public_id,
@@ -117,11 +136,12 @@ router.post(
 
 /**
  * GET /api/study-files?type=plan&grade=10&q=abc
- * Protected (لأنك تعتمد على req.user.grade و role)
- */
-/**
- * GET /api/study-files?type=plan&grade=10&q=abc
  * Protected
+ *
+ * قواعد الوصول:
+ * - admin: يرى كل شيء + يقدر يفلتر grade اختياري
+ * - teacher: يرى audience=all أو teacher + (اختياري) فلتر grade/null
+ * - student: يرى audience=all أو student + grade=null أو grade=Grade الخاص به
  */
 router.get("/", protect, async (req, res) => {
   try {
@@ -132,6 +152,7 @@ router.get("/", protect, async (req, res) => {
 
     const and = [];
 
+    // filters
     if (type && ["plan", "schedule"].includes(type)) and.push({ type });
 
     if (q && String(q).trim()) {
@@ -145,21 +166,28 @@ router.get("/", protect, async (req, res) => {
       });
     }
 
-    // ✅ Role-based grade rules
+    // ✅ Audience rules
+    if (role === "teacher") {
+      and.push({ audience: { $in: ["all", "teacher"] } });
+    } else if (role === "student") {
+      and.push({ audience: { $in: ["all", "student"] } });
+    }
+    // admin: no audience restriction
+
+    // ✅ Grade rules
     if (role === "admin") {
-      // admin: optional filter
       if (grade) and.push({ grade: String(grade) });
     } else if (role === "teacher") {
-      // teacher: see all; optional filter by grade
-      if (grade) and.push({ $or: [{ grade: null }, { grade: String(grade) }] });
-      // else: no grade condition at all
+      // teacher sees all grades by default
+      if (grade) {
+        and.push({ $or: [{ grade: null }, { grade: String(grade) }] });
+      }
     } else {
-      // student/others: must be limited to own grade + null
-      const effectiveGrade = userGrade; // ignore query grade for safety
+      // student/others: locked to own grade + null only
+      const effectiveGrade = userGrade;
       if (effectiveGrade) {
         and.push({ $or: [{ grade: null }, { grade: effectiveGrade }] });
       } else {
-        // if student has no grade -> fallback to null only
         and.push({ grade: null });
       }
     }
