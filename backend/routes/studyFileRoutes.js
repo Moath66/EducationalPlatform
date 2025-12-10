@@ -119,11 +119,15 @@ router.post(
  * GET /api/study-files?type=plan&grade=10&q=abc
  * Protected (لأنك تعتمد على req.user.grade و role)
  */
+/**
+ * GET /api/study-files?type=plan&grade=10&q=abc
+ * Protected
+ */
 router.get("/", protect, async (req, res) => {
   try {
     const { type, grade, q } = req.query;
 
-    const role = req.user?.role;
+    const role = req.user?.role; // "admin" | "teacher" | "student"
     const userGrade = req.user?.grade != null ? String(req.user.grade) : null;
 
     const and = [];
@@ -141,13 +145,21 @@ router.get("/", protect, async (req, res) => {
       });
     }
 
+    // ✅ Role-based grade rules
     if (role === "admin") {
+      // admin: optional filter
       if (grade) and.push({ grade: String(grade) });
+    } else if (role === "teacher") {
+      // teacher: see all; optional filter by grade
+      if (grade) and.push({ $or: [{ grade: null }, { grade: String(grade) }] });
+      // else: no grade condition at all
     } else {
-      const effectiveGrade = grade ? String(grade) : userGrade;
+      // student/others: must be limited to own grade + null
+      const effectiveGrade = userGrade; // ignore query grade for safety
       if (effectiveGrade) {
         and.push({ $or: [{ grade: null }, { grade: effectiveGrade }] });
       } else {
+        // if student has no grade -> fallback to null only
         and.push({ grade: null });
       }
     }
