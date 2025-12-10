@@ -23,7 +23,6 @@ export default function StudyPlans() {
   const [uploading, setUploading] = useState(false);
 
   const [previewItem, setPreviewItem] = useState(null);
-  // ما نحتاج opening بعد ما صار فتح مباشر، لكن بخليه عشان لا تتعب بالـ UI
   const [opening, setOpening] = useState(false);
 
   const fetchItems = async () => {
@@ -155,18 +154,31 @@ export default function StudyPlans() {
   const isPdf = (it) => String(it.fileType || "").includes("pdf");
 
   /**
-   * ✅ فتح/تحميل مباشر (Public)
-   * - ما فيه axios/blob
-   * - يفتح روابط Cloudinary مباشرة (fileUrl/downloadUrl)
+   * ✅ فتح/تحميل مباشر - التعديل الجديد
+   * - إزالة undefined من المسار
+   * - استخدام fileUrl من Cloudinary مباشرة
    */
-  const API_BASE = import.meta.env.VITE_API_BASE_URL;
-
   const openPublic = (file, forceDownload = false) => {
     if (!file?._id) return;
+
+    setOpening(true);
+
+    // ✅ استخدام fileUrl من Cloudinary مباشرة إذا كان موجود
+    if (file.fileUrl) {
+      window.open(file.fileUrl, "_blank", "noopener,noreferrer");
+      setOpening(false);
+      return;
+    }
+
+    // ✅ أو استخدام endpoint من الـ backend (بدون undefined)
+    const API_BASE = import.meta.env.VITE_API_BASE_URL || "";
     const url = `${API_BASE}/api/study-files/${file._id}/download${
       forceDownload ? "?dl=1" : ""
     }`;
+
     window.open(url, "_blank", "noopener,noreferrer");
+
+    setTimeout(() => setOpening(false), 500);
   };
 
   return (
@@ -356,10 +368,12 @@ export default function StudyPlans() {
                           border: "none",
                           padding: 0,
                           cursor: "pointer",
+                          color: "#0066cc",
+                          textDecoration: "underline",
                         }}
                         onClick={() => openPublic(it, false)}
                         disabled={opening}
-                        title="فتح مباشر (Public)"
+                        title="فتح الملف"
                       >
                         {it.fileName || "فتح"}
                       </button>
@@ -370,9 +384,10 @@ export default function StudyPlans() {
                         <button
                           type="button"
                           className="sp-btn sp-btnView"
-                          onClick={() => setPreviewItem(it)}
+                          onClick={() => openPublic(it, false)}
+                          disabled={opening}
                         >
-                          معاينة
+                          {opening ? "..." : "معاينة"}
                         </button>
 
                         <button
@@ -380,7 +395,7 @@ export default function StudyPlans() {
                           className="sp-btn"
                           onClick={() => openPublic(it, true)}
                           disabled={opening}
-                          title="تحميل مباشر (Public)"
+                          title="تحميل الملف"
                         >
                           تحميل
                         </button>
@@ -424,21 +439,44 @@ export default function StudyPlans() {
 
             <div className="sp-modalBody">
               {isImage(previewItem) ? (
-                <button
-                  type="button"
-                  className="sp-primaryLink"
-                  onClick={() => openPublic(previewItem, false)}
-                >
-                  فتح الصورة
-                </button>
+                <div style={{ textAlign: "center" }}>
+                  <img
+                    src={previewItem.fileUrl}
+                    alt={previewItem.title}
+                    style={{ maxWidth: "100%", maxHeight: "70vh" }}
+                  />
+                  <div style={{ marginTop: "1rem" }}>
+                    <button
+                      type="button"
+                      className="sp-primaryLink"
+                      onClick={() => openPublic(previewItem, false)}
+                    >
+                      فتح في تبويب جديد
+                    </button>
+                  </div>
+                </div>
               ) : isPdf(previewItem) ? (
-                <button
-                  type="button"
-                  className="sp-primaryLink"
-                  onClick={() => openPublic(previewItem, false)}
-                >
-                  فتح الـ PDF
-                </button>
+                <div style={{ textAlign: "center" }}>
+                  <iframe
+                    src={previewItem.fileUrl}
+                    style={{
+                      width: "100%",
+                      height: "70vh",
+                      border: "1px solid #ddd",
+                      borderRadius: "8px",
+                    }}
+                    title={previewItem.title}
+                  />
+                  <div style={{ marginTop: "1rem" }}>
+                    <button
+                      type="button"
+                      className="sp-primaryLink"
+                      onClick={() => openPublic(previewItem, false)}
+                    >
+                      فتح في تبويب جديد
+                    </button>
+                  </div>
+                </div>
               ) : (
                 <button
                   type="button"

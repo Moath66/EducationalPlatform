@@ -42,6 +42,7 @@ const uploadToCloudinary = (fileBuffer, options) =>
 
 /**
  * POST /api/study-files (Admin only)
+ * رفع ملف جديد
  */
 router.post(
   "/",
@@ -77,10 +78,7 @@ router.post(
 
       const result = await uploadToCloudinary(req.file.buffer, uploadOptions);
 
-      // Cloudinary transforms:
-      // raw: /upload/  -> نقدر نضيف flags
-      // fl_inline: عرض داخل المتصفح
-      // fl_attachment: تحميل
+      // ✅ روابط Cloudinary مع flags للتحكم بالعرض/التحميل
       const viewUrl = isPDF
         ? result.secure_url.replace("/upload/", "/upload/fl_inline/")
         : result.secure_url;
@@ -94,7 +92,7 @@ router.post(
         type,
         grade: grade ? String(grade) : null,
         description: description || "",
-        fileUrl: viewUrl, // نخلي fileUrl هو رابط العرض
+        fileUrl: viewUrl, // رابط العرض (يفتح في المتصفح)
         downloadUrl, // رابط التحميل
         publicId: result.public_id,
         fileName: req.file.originalname,
@@ -111,7 +109,7 @@ router.post(
 
 /**
  * GET /api/study-files
- * Protected
+ * جلب قائمة الملفات (محمي)
  */
 router.get("/", protect, async (req, res) => {
   try {
@@ -122,8 +120,10 @@ router.get("/", protect, async (req, res) => {
 
     const and = [];
 
+    // فلتر النوع
     if (type && ["plan", "schedule"].includes(type)) and.push({ type });
 
+    // فلتر البحث
     if (q && String(q).trim()) {
       const query = String(q).trim();
       and.push({
@@ -135,9 +135,12 @@ router.get("/", protect, async (req, res) => {
       });
     }
 
+    // فلتر الصف/المرحلة
     if (role === "admin") {
+      // المشرف يشوف كل شيء
       if (grade) and.push({ grade: String(grade) });
     } else {
+      // المعلم/الطالب يشوف ملفات صفه + الملفات العامة (grade: null)
       const effectiveGrade = grade ? String(grade) : userGrade;
       if (effectiveGrade) {
         and.push({ $or: [{ grade: null }, { grade: effectiveGrade }] });
@@ -157,16 +160,20 @@ router.get("/", protect, async (req, res) => {
 });
 
 /**
- * ✅ Public redirect to Cloudinary (عام)
- * GET /api/study-files/:id/download?dl=1
+ * ✅ GET /api/study-files/:id/download
+ * فتح/تحميل الملف (عام - بدون حماية)
+ * ?dl=1 للتحميل المباشر
  */
 router.get("/:id/download", async (req, res) => {
   try {
     const doc = await StudyFile.findById(req.params.id);
-    if (!doc) return res.status(404).json({ message: "الملف غير موجود" });
+    if (!doc) {
+      return res.status(404).json({ message: "الملف غير موجود" });
+    }
 
-    const dl = String(req.query.dl || "") === "1";
-    const targetUrl = dl
+    // إذا dl=1 يستخدم downloadUrl، غير كذا viewUrl
+    const wantsDownload = String(req.query.dl || "") === "1";
+    const targetUrl = wantsDownload
       ? doc.downloadUrl || doc.fileUrl
       : doc.fileUrl || doc.downloadUrl;
 
@@ -174,6 +181,7 @@ router.get("/:id/download", async (req, res) => {
       return res.status(400).json({ message: "رابط الملف غير موجود" });
     }
 
+    // ✅ Redirect مباشر لـ Cloudinary
     return res.redirect(302, targetUrl);
   } catch (err) {
     console.error("download redirect error:", err?.message || err);
@@ -182,19 +190,54 @@ router.get("/:id/download", async (req, res) => {
 });
 
 /**
- * DELETE /api/study-files/:id (Admin only)
+ * PUT /api/study-files/:id
+ * تحديث بيانات الملف (Admin only)
+ */
+router.put("/:id", protect, adminOnly, async (req, res) => {
+  try {
+    const { title, type, grade, description } = req.body;
+
+    const update = {};
+    if (title !== undefined) update.title = title;
+    if (type !== undefined) update.type = type;
+    if (grade !== undefined) update.grade = grade ? String(grade) : null;
+    if (description !== undefined) update.description = description || "";
+
+    const updated = await StudyFile.findByIdAndUpdate(req.params.id, update, {
+      new: true,
+    });
+
+    if (!updated) {
+      return res.status(404).json({ message: "الملف غير موجود" });
+    }
+
+    res.json({ message: "تم تحديث بيانات الملف", file: updated });
+  } catch (err) {
+    console.error("studyFile update error:", err);
+    res.status(500).json({ message: "خطأ أثناء تحديث الملف" });
+  }
+});
+
+/**
+ * DELETE /api/study-files/:id
+ * حذف الملف (Admin only)
  */
 router.delete("/:id", protect, adminOnly, async (req, res) => {
   try {
     const doc = await StudyFile.findById(req.params.id);
-    if (!doc) return res.status(404).json({ message: "الملف غير موجود" });
+    if (!doc) {
+      return res.status(404).json({ message: "الملف غير موجود" });
+    }
 
+    // حذف من Cloudinary
     const isPDF = (doc.fileType || "").includes("pdf");
     await cloudinary.uploader.destroy(doc.publicId, {
       resource_type: isPDF ? "raw" : "image",
     });
 
+    // حذف من قاعدة البيانات
     await StudyFile.findByIdAndDelete(req.params.id);
+
     res.json({ message: "تم حذف الملف بنجاح" });
   } catch (err) {
     console.error("studyFile delete error:", err);
