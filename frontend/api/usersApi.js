@@ -2,28 +2,41 @@
 import apiClient from "./apiClient";
 
 /**
- * Admin only - list teachers (for dropdowns in Admin pages)
- * GET /api/users/teachers -> { users: [...] }
- */
-export async function fetchTeachers() {
-  const res = await apiClient.get("/api/users/teachers");
-  return res.data; // { users: [...] }
-}
-
-/**
- * Admin only - list users (matches your userRoutes: GET /api/users is adminOnly)
- * GET /api/users?role=&approved=&q=
+ * Admin only - list users
+ * GET /api/users?role=&approved=
+ * ملاحظة: عندك في الباك getAllUsers يرجّع Array مباشرة (مو {users})
  */
 export async function fetchUsers(params = {}) {
   const res = await apiClient.get("/api/users", { params });
-  return res.data; // recommended: { users: [...] } (or array حسب الكنترولر)
+  return res.data; // Array of users
 }
 
 /**
- * (Optional) If you add: GET /api/users/:id route later
+ * Admin only - list teachers (for dropdowns)
+ * GET /api/users?role=teacher
+ */
+export async function fetchTeachers() {
+  const res = await apiClient.get("/api/users", {
+    params: { role: "teacher" },
+  });
+  return res.data; // Array of teachers
+}
+
+/**
+ * Admin only - list students (for multi-select)
+ * GET /api/users?role=student
+ */
+export async function fetchStudents(params = {}) {
+  const res = await apiClient.get("/api/users", {
+    params: { role: "student", ...params },
+  });
+  return res.data; // Array of students
+}
+
+/**
+ * ملاحظة: /api/users/:id غير موجود عندك حالياً في routes
+ * (عشان كذا نخليه throw واضح بدل ما يكسر فجأة)
  */
 export async function fetchUserById(id) {
-  if (!id) throw new Error("user id is required");
-  const res = await apiClient.get(`/api/users/${id}`);
-  return res.data;
+  throw new Error("GET /api/users/:id غير متوفر حالياً في الباك.");
 }
