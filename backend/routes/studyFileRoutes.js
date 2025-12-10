@@ -81,23 +81,19 @@ router.post(
       const uploadOptions = {
         folder: "educational-platform/study-files",
         public_id: `${Date.now()}-${safeName}`,
-        resource_type: isPDF ? "raw" : "image",
+        resource_type: isPDF ? "auto" : "image", // ✅ أهم تغيير
         use_filename: true,
         unique_filename: true,
-        ...(isPDF ? { format: "pdf" } : {}),
       };
 
       const result = await uploadToCloudinary(req.file.buffer, uploadOptions);
 
-      let fileUrl = result.secure_url;
-      let downloadUrl = "";
+      const fileUrl = result.secure_url;
 
-      if (isPDF) {
-        const { downloadUrl: dlUrl } = buildPdfUrls(fileUrl);
-        downloadUrl = dlUrl;
-      } else {
-        downloadUrl = fileUrl;
-      }
+      // ✅ تحميل (attachment) للـ PDF
+      const downloadUrl = isPDF
+        ? result.secure_url.replace("/upload/", "/upload/fl_attachment/")
+        : result.secure_url;
 
       const created = await StudyFile.create({
         title,
