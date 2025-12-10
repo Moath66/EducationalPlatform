@@ -1,12 +1,13 @@
 import { useEffect, useMemo, useState } from "react";
 import AdminLayout from "../../layouts/AdminLayout";
 import "../../styles/ClassSessions.css";
+
 import {
   createSession,
   deleteSession,
   fetchSessions,
   updateSession,
-} from "../../api/sessionsApi";
+} from "../../../api/sessionsApi";
 
 const STATUS_LABEL = {
   scheduled: "مجدولة",
