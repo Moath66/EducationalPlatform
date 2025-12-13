@@ -1,17 +1,13 @@
-import express from "express";
-import {
+const express = require("express");
+const {
   getSettings,
   updateSettings,
-} from "../controllers/settingController.js";
-import { protect, adminOnly } from "../middleware/authMiddleware.js";
+} = require("../controllers/settingController");
+const { protect, adminOnly } = require("../middleware/authMiddleware");
 
 const router = express.Router();
 
-// قراءة الإعدادات (مفتوحة أو محمية — خيارك)
-// أنصح تتركها مفتوحة
 router.get("/", getSettings);
-
-// تحديث الإعدادات (Admin فقط)
 router.put("/", protect, adminOnly, updateSettings);
 
-export default router;
+module.exports = router;

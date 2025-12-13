@@ -1,12 +1,10 @@
-import Setting from "../models/Setting.js";
+const Setting = require("../models/Setting");
 
 // GET /api/settings
-export const getSettings = async (req, res) => {
+const getSettings = async (req, res) => {
   try {
-    // Singleton: وثيقة واحدة فقط
     let settings = await Setting.findOne();
 
-    // لو ما فيه وثيقة، نسوي واحدة تلقائيًا
     if (!settings) {
       settings = await Setting.create({});
     }
@@ -20,7 +18,7 @@ export const getSettings = async (req, res) => {
 };
 
 // PUT /api/settings
-export const updateSettings = async (req, res) => {
+const updateSettings = async (req, res) => {
   try {
     const { platformName, contactEmail, logoUrl } = req.body;
 
@@ -33,8 +31,7 @@ export const updateSettings = async (req, res) => {
       settings.contactEmail = contactEmail.trim();
     if (typeof logoUrl === "string") settings.logoUrl = logoUrl.trim();
 
-    // لو عندك protect middleware يرجع user في req.user
-    if (req.user?._id) settings.updatedBy = req.user._id;
+    if (req.user && req.user._id) settings.updatedBy = req.user._id;
 
     await settings.save();
     return res.json(settings);
@@ -44,3 +41,5 @@ export const updateSettings = async (req, res) => {
       .json({ message: "Server error", error: err.message });
   }
 };
+
+module.exports = { getSettings, updateSettings };
