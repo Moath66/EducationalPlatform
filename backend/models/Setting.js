@@ -1,17 +1,17 @@
-import mongoose from "mongoose";
+const mongoose = require("mongoose");
 
 const settingSchema = new mongoose.Schema(
   {
     platformName: { type: String, default: "المنصة التعليمية" },
     contactEmail: { type: String, default: "contact@example.com" },
-
-    // للشعار لاحقًا (رابط)
     logoUrl: { type: String, default: "" },
-
-    updatedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
+    updatedBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: "User",
+      default: null,
+    },
   },
   { timestamps: true }
 );
 
-const Setting = mongoose.model("Setting", settingSchema);
-export default Setting;
+module.exports = mongoose.model("Setting", settingSchema);
