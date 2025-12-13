@@ -3,13 +3,12 @@ import {
   getSettings,
   updateSettings,
 } from "../controllers/settingController.js";
-import protect from "../middleware/protect.js";
-import adminOnly from "../middleware/adminOnly.js";
+import { protect, adminOnly } from "../middleware/authMiddleware.js";
 
 const router = express.Router();
 
-// قراءة الإعدادات (تقدر تخليها عامة عشان الواجهة تعرض اسم المنصة)
-// أو خليها محمية لو تبغى
+// قراءة الإعدادات (مفتوحة أو محمية — خيارك)
+// أنصح تتركها مفتوحة
 router.get("/", getSettings);
 
 // تحديث الإعدادات (Admin فقط)
