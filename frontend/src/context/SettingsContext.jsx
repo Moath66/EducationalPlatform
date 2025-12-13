@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from "react";
-import { getSettings } from "../../../api/settingApi";
+import { getSettings } from "../../api/settingApi";
 
 const SettingsContext = createContext(null);
 
