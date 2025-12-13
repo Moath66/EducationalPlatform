@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import AdminLayout from "../../layouts/AdminLayout";
-import { getSettings, updateSettings } from "../../api/settingApi";
+import { getSettings, updateSettings } from "../../../api/settingApi";
 import { useSettings } from "../../context/SettingsContext";
 
 export default function Settings() {
