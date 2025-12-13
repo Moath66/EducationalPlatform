@@ -11,6 +11,8 @@ const getSettings = async (req, res) => {
 
     return res.json(settings);
   } catch (err) {
+    console.error("❌ getSettings error:", err);
+
     return res
       .status(500)
       .json({ message: "Server error", error: err.message });
@@ -36,6 +38,8 @@ const updateSettings = async (req, res) => {
     await settings.save();
     return res.json(settings);
   } catch (err) {
+    console.error("❌ getSettings error:", err);
+
     return res
       .status(500)
       .json({ message: "Server error", error: err.message });
