@@ -57,6 +57,9 @@ app.use("/api/sessions", sessionRoutes);
 const profileRoutes = require("./routes/profileRoutes");
 app.use("/api/profile", profileRoutes);
 
+const settingRoutes = require("./routes/settingRoutes");
+app.use("/api/settings", settingRoutes);
+
 // Test
 app.get("/", (req, res) => {
   res.send("API Working ✔");

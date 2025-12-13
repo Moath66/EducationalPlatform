@@ -1,18 +1,36 @@
 import { Link, NavLink } from "react-router-dom";
+import { useSettings } from "../context/SettingsContext";
 
 export default function AdminLayout({ children }) {
+  const { settings, loading } = useSettings();
+
   return (
     <div className="min-h-screen flex bg-slate-100" dir="rtl">
       {/* Sidebar */}
       <aside className="w-64 bg-slate-900 text-slate-100 flex flex-col">
+        {/* Logo + Platform Name */}
         <div className="px-6 py-4 border-b border-slate-800">
-          <h1 className="text-xl font-bold">لوحة تحكم المشرف</h1>
-          <p className="text-xs text-slate-400 mt-1">إدارة المنصة التعليمية</p>
+          <div className="flex items-center gap-3">
+            {settings?.logoUrl && (
+              <img
+                src={settings.logoUrl}
+                alt="logo"
+                className="w-10 h-10 object-contain rounded bg-white p-1"
+              />
+            )}
+
+            <div>
+              <h1 className="text-lg font-bold leading-tight">
+                {loading ? "..." : settings?.platformName || "المنصة التعليمية"}
+              </h1>
+              <p className="text-xs text-slate-400">لوحة تحكم المشرف</p>
+            </div>
+          </div>
         </div>
 
+        {/* Navigation */}
         <nav className="flex-1 px-4 py-4 space-y-1 text-sm">
           <AdminNavItem to="/admin" label="لوحة التحكم" />
-          {/* زر طلبات التسجيل  ← جديد */}
           <AdminNavItem to="/admin/pending" label="طلبات التسجيل" />
           <AdminNavItem to="/admin/teachers" label="إدارة المعلمين" />
           <AdminNavItem to="/admin/students" label="إدارة الطلاب" />
@@ -22,6 +40,7 @@ export default function AdminLayout({ children }) {
           <AdminNavItem to="/admin/settings" label="إعدادات المنصة" />
         </nav>
 
+        {/* Logout */}
         <div className="px-4 py-4 border-t border-slate-800 text-xs text-slate-400">
           <button
             onClick={() => (window.location.href = "/login")}
@@ -69,7 +88,6 @@ function AdminNavItem({ to, label }) {
       }
     >
       <span className="text-sm">{label}</span>
-      {/* دائرة أيقونة بسيطة */}
       <span className="w-2 h-2 rounded-full bg-emerald-400/70" />
     </NavLink>
   );

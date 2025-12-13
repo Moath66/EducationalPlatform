@@ -46,17 +46,25 @@ export default function TeacherSessions() {
     setCopied("");
 
     try {
-      const nowIso = new Date().toISOString();
+      // 👇 هامش 12 ساعة للخلف (عشان ما تختفي جلسة “مباشر” أو جلسة بدأت قريب)
+      const fromDate = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
 
+      // 👇 لا تحصرها على scheduled فقط
+      // نخليها تجيب scheduled + live
       const data = await fetchSessions({
         teacherId,
-        from: nowIso,
-        status: "scheduled",
+        from: fromDate,
         limit: 50,
         sort: "startAt",
+        // إذا الباك يدعم status واحد فقط: لا ترسل status هنا
+        // وفلترها بالفرونت
       });
 
-      const list = normalizeSessions(data);
+      let list = normalizeSessions(data);
+
+      // ✅ فلترة من الفرونت: بس scheduled + live
+      list = list.filter((s) => ["scheduled", "live"].includes(s.status));
+
       setSessions(list);
     } catch (e) {
       setErr(e.message || "فشل تحميل الجلسات");
@@ -100,7 +108,7 @@ export default function TeacherSessions() {
         <div>
           <h1 className="text-3xl font-bold mb-1">جلساتي القادمة</h1>
           <p className="text-slate-500 text-sm">
-            أهلاً {user?.name || "المعلم"} — هنا ستجد جلساتك المجدولة القادمة.
+            أهلاً {user?.name || "المعلم"} — هنا ستجد جلساتك (مجدولة/مباشر).
           </p>
         </div>
 
@@ -131,9 +139,7 @@ export default function TeacherSessions() {
         </div>
 
         <div className="text-sm text-slate-600">
-          {loading
-            ? "جاري التحميل..."
-            : `عدد الجلسات القادمة: ${filtered.length}`}
+          {loading ? "جاري التحميل..." : `عدد الجلسات: ${filtered.length}`}
         </div>
       </div>
 
@@ -152,7 +158,7 @@ export default function TeacherSessions() {
       <div className="space-y-3">
         {!loading && filtered.length === 0 ? (
           <div className="bg-white p-5 rounded-xl shadow text-slate-600">
-            لا توجد جلسات قادمة حالياً.
+            لا توجد جلسات (مجدولة/مباشر) حالياً.
           </div>
         ) : null}
 
@@ -171,6 +177,9 @@ export default function TeacherSessions() {
                   <p className="text-slate-500 text-sm mt-1">
                     {courseName} • {formatAr(s.startAt)} • {s.durationMinutes}{" "}
                     دقيقة
+                  </p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    الحالة: {s.status}
                   </p>
                 </div>
 

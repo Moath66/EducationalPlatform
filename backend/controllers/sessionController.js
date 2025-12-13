@@ -19,6 +19,31 @@ function buildDateRange(from, to) {
   return Object.keys(range).length ? range : null;
 }
 
+/**
+ * يدعم:
+ * - status=scheduled
+ * - status=scheduled,live
+ * - status[]=scheduled&status[]=live (لو الفرونت يرسلها كـ array)
+ */
+function parseStatuses(status) {
+  if (!status || status === "all") return [];
+
+  // لو جاك status كـ array (مثلاً ?status=scheduled&status=live)
+  if (Array.isArray(status)) {
+    return status
+      .map(String)
+      .map((s) => s.trim())
+      .filter(Boolean);
+  }
+
+  // لو جاك "scheduled,live"
+  const str = String(status);
+  return str
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+}
+
 // POST /api/sessions
 exports.createSession = async (req, res) => {
   try {
@@ -89,10 +114,15 @@ exports.getSessions = async (req, res) => {
       q,
       page = 1,
       limit = 20,
-      sort = "-startAt", // الافتراضي: الأحدث أولاً
+      sort = "-startAt",
     } = req.query;
 
     const filter = {};
+
+    // ✅ (اختياري) لو Teacher وما أرسل teacherId -> رجّع جلساته فقط
+    if (req.user?.role === "teacher" && !teacherId) {
+      filter.teacherId = req.user.id || req.user._id;
+    }
 
     if (courseId) {
       if (!isValidObjectId(courseId))
@@ -106,16 +136,22 @@ exports.getSessions = async (req, res) => {
       filter.teacherId = teacherId;
     }
 
-    if (status && status !== "all") {
-      filter.status = status;
-    }
+    // ✅ status متعدد
+    const statuses = parseStatuses(status);
+    if (statuses.length === 1) filter.status = statuses[0];
+    if (statuses.length > 1) filter.status = { $in: statuses };
 
     const range = buildDateRange(from, to);
     if (range) filter.startAt = range;
 
-    // بحث نصي: يشتغل على title/notes (text index)
+    // ✅ بحث: لو عندك text index يشتغل، لو ما عندك نخليه regex fallback
     if (q && String(q).trim()) {
-      filter.$text = { $search: String(q).trim() };
+      const needle = String(q).trim();
+      // text search (أفضل لو عندك index)
+      filter.$or = [
+        { title: { $regex: needle, $options: "i" } },
+        { notes: { $regex: needle, $options: "i" } },
+      ];
     }
 
     const safePage = Math.max(1, Number(page) || 1);
@@ -124,8 +160,8 @@ exports.getSessions = async (req, res) => {
 
     const [items, total] = await Promise.all([
       Session.find(filter)
-        .populate("courseId", "name title code") // عدّل الحقول حسب Course عندك
-        .populate("teacherId", "name fullName email") // عدّل الحقول حسب User عندك
+        .populate("courseId", "title name code")
+        .populate("teacherId", "name fullName email")
         .sort(sort)
         .skip(skip)
         .limit(safeLimit),
@@ -152,7 +188,7 @@ exports.getSessionById = async (req, res) => {
       return res.status(400).json({ message: "id غير صالح." });
 
     const doc = await Session.findById(id)
-      .populate("courseId", "name title code")
+      .populate("courseId", "title name code")
       .populate("teacherId", "name fullName email");
 
     if (!doc) return res.status(404).json({ message: "الجلسة غير موجودة." });
@@ -220,7 +256,7 @@ exports.updateSession = async (req, res) => {
       new: true,
       runValidators: true,
     })
-      .populate("courseId", "name title code")
+      .populate("courseId", "title name code")
       .populate("teacherId", "name fullName email");
 
     if (!updated)
