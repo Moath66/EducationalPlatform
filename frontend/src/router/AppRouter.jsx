@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LandingPage from "../pages/Landing/LandingPage";
 import LoginPage from "../pages/Auth/LoginPage";
 import RegisterPage from "../pages/Auth/RegisterPage";
@@ -34,6 +34,7 @@ export default function AppRouter() {
   return (
     <BrowserRouter>
       <Routes>
+        {/* Public */}
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
@@ -47,7 +48,6 @@ export default function AppRouter() {
             </RequireAdmin>
           }
         />
-
         <Route
           path="/admin/teachers"
           element={
@@ -56,7 +56,6 @@ export default function AppRouter() {
             </RequireAdmin>
           }
         />
-
         <Route
           path="/admin/students"
           element={
@@ -65,7 +64,6 @@ export default function AppRouter() {
             </RequireAdmin>
           }
         />
-
         <Route
           path="/admin/pending"
           element={
@@ -74,7 +72,6 @@ export default function AppRouter() {
             </RequireAdmin>
           }
         />
-
         <Route
           path="/admin/courses"
           element={
@@ -83,7 +80,6 @@ export default function AppRouter() {
             </RequireAdmin>
           }
         />
-
         <Route
           path="/admin/study-plans"
           element={
@@ -92,7 +88,6 @@ export default function AppRouter() {
             </RequireAdmin>
           }
         />
-
         <Route
           path="/admin/sessions"
           element={
@@ -101,7 +96,6 @@ export default function AppRouter() {
             </RequireAdmin>
           }
         />
-
         <Route
           path="/admin/settings"
           element={
@@ -120,7 +114,6 @@ export default function AppRouter() {
             </RequireStudent>
           }
         />
-
         <Route
           path="/student/attendance"
           element={
@@ -129,7 +122,6 @@ export default function AppRouter() {
             </RequireStudent>
           }
         />
-
         <Route
           path="/student/schedule"
           element={
@@ -138,7 +130,6 @@ export default function AppRouter() {
             </RequireStudent>
           }
         />
-
         <Route
           path="/student/study-plans"
           element={
@@ -147,7 +138,6 @@ export default function AppRouter() {
             </RequireStudent>
           }
         />
-
         <Route
           path="/student/profile"
           element={
@@ -157,7 +147,8 @@ export default function AppRouter() {
           }
         />
 
-        <Routes
+        {/* ✅ هنا كان الغلط: Routes -> Route */}
+        <Route
           path="/student/sessions"
           element={
             <RequireStudent>
@@ -183,7 +174,6 @@ export default function AppRouter() {
             </RequireTeacher>
           }
         />
-
         <Route
           path="/teacher/schedule"
           element={
@@ -192,7 +182,6 @@ export default function AppRouter() {
             </RequireTeacher>
           }
         />
-
         <Route
           path="/teacher/study-files"
           element={
@@ -201,7 +190,6 @@ export default function AppRouter() {
             </RequireTeacher>
           }
         />
-
         <Route
           path="/teacher/sessions"
           element={
@@ -210,7 +198,6 @@ export default function AppRouter() {
             </RequireTeacher>
           }
         />
-
         <Route
           path="/teacher/students"
           element={
@@ -219,7 +206,6 @@ export default function AppRouter() {
             </RequireTeacher>
           }
         />
-
         <Route
           path="/teacher/profile"
           element={
@@ -228,6 +214,9 @@ export default function AppRouter() {
             </RequireTeacher>
           }
         />
+
+        {/* Optional fallback */}
+        <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </BrowserRouter>
   );

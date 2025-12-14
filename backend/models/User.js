@@ -8,13 +8,13 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
-      unique: true, // يبقى موجود
+      unique: true, // ✅ يكفي هذا لوحده
       lowercase: true,
       trim: true,
     },
 
-    phone: { type: String },
-    grade: { type: String },
+    phone: { type: String, default: "" },
+    grade: { type: String, default: "" },
 
     password: { type: String, required: true },
 
@@ -28,17 +28,14 @@ const userSchema = new mongoose.Schema(
     isApproved: {
       type: Boolean,
       default: function () {
-        return this.role === "admin" ? true : false;
+        return this.role === "admin";
       },
     },
   },
   { timestamps: true }
 );
 
-// ✅ تأكيد Unique Index على الإيميل (الأهم لضمان عدم التكرار في DB)
-userSchema.index({ email: 1 }, { unique: true });
-
-// ✅ اختياري: ضمان lowercase حتى لو جاء من controller بحروف كبيرة
+// ✅ ضمان lowercase حتى لو جاء بحروف كبيرة
 userSchema.pre("save", function (next) {
   if (this.email) this.email = this.email.toLowerCase().trim();
   next();
