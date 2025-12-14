@@ -8,6 +8,7 @@ const {
   getSessionById,
   updateSession,
   deleteSession,
+  getTeacherSessions,
 } = require("../controllers/sessionController");
 
 const { protect, adminOnly } = require("../middleware/authMiddleware");
@@ -22,7 +23,6 @@ router.put("/:id", protect, adminOnly, updateSession);
 router.delete("/:id", protect, adminOnly, deleteSession);
 router.get("/teacher", protect, getTeacherSessions);
 router.get("/student/upcoming", protect, getStudentUpcomingSessions);
-
 
 // ✅ تفاصيل جلسة (admin/teacher)
 // (في controller تحقق صلاحية teacher)
