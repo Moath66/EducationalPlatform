@@ -2,17 +2,12 @@
 @tailwind components;
 @tailwind utilities;
 
-/* RTL */
-html {
-  direction: rtl;
-  text-align: right;
-}
-
+/* ✅ Default primary (لو ما فيه settings) */
 :root {
   --primary-rgb: 37 99 235; /* #2563eb */
 }
 
-/* مثال بسيط لو تحب تغيّر خلفية عامة بالدارك */
+/* ✅ Dark Mode background (اختياري) */
 html.dark body {
   background-color: #0b1220;
 }

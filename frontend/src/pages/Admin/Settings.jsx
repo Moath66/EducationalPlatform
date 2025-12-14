@@ -15,9 +15,9 @@ export default function Settings() {
   const [language, setLanguage] = useState("ar");
 
   const [loading, setLoading] = useState(false);
-
   const { reloadSettings } = useSettings();
 
+  // ✅ تحميل الإعدادات من السيرفر
   useEffect(() => {
     getSettings().then((data) => {
       setPlatformName(data.platformName || "");
@@ -31,6 +31,26 @@ export default function Settings() {
       setLanguage(data.language || "ar");
     });
   }, []);
+
+  // ✅ تطبيق فوري للـ Dark Mode (حتى قبل الحفظ)
+  useEffect(() => {
+    const root = document.documentElement;
+    if (darkMode) root.classList.add("dark");
+    else root.classList.remove("dark");
+  }, [darkMode]);
+
+  // ✅ تطبيق فوري للغة (RTL/LTR) حتى قبل الحفظ
+  useEffect(() => {
+    const root = document.documentElement;
+    const lang = language === "en" ? "en" : "ar";
+    root.setAttribute("lang", lang);
+    root.setAttribute("dir", lang === "ar" ? "rtl" : "ltr");
+  }, [language]);
+
+  // ✅ تطبيق فوري للون الأساسي كـ CSS Variable (يساعدك لاحقًا مع Tailwind advanced)
+  useEffect(() => {
+    document.documentElement.style.setProperty("--primary", primaryColor);
+  }, [primaryColor]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -48,7 +68,7 @@ export default function Settings() {
         language,
       });
 
-      await reloadSettings(); // يطبق favicon + dark + dir + primary color
+      await reloadSettings(); // يثبت التغييرات ويطبق favicon وغيرها
       alert("تم حفظ الإعدادات بنجاح");
     } catch (err) {
       alert("حدث خطأ أثناء الحفظ");
@@ -75,9 +95,7 @@ export default function Settings() {
 
           <div className="space-y-4">
             <div>
-              <label className="block mb-1 text-sm font-medium">
-                اسم المنصة
-              </label>
+              <label className="block mb-1 text-sm font-medium">اسم المنصة</label>
               <input
                 value={platformName}
                 onChange={(e) => setPlatformName(e.target.value)}
@@ -86,9 +104,7 @@ export default function Settings() {
             </div>
 
             <div>
-              <label className="block mb-1 text-sm font-medium">
-                وصف المنصة
-              </label>
+              <label className="block mb-1 text-sm font-medium">وصف المنصة</label>
               <textarea
                 value={platformDescription}
                 onChange={(e) => setPlatformDescription(e.target.value)}
@@ -98,9 +114,7 @@ export default function Settings() {
             </div>
 
             <div>
-              <label className="block mb-1 text-sm font-medium">
-                رابط الشعار (Logo URL)
-              </label>
+              <label className="block mb-1 text-sm font-medium">رابط الشعار (Logo URL)</label>
               <input
                 value={logoUrl}
                 onChange={(e) => setLogoUrl(e.target.value)}
@@ -120,15 +134,16 @@ export default function Settings() {
             </div>
 
             <div>
-              <label className="block mb-1 text-sm font-medium">
-                رابط أيقونة الموقع (Favicon URL)
-              </label>
+              <label className="block mb-1 text-sm font-medium">رابط أيقونة الموقع (Favicon URL)</label>
               <input
                 value={faviconUrl}
                 onChange={(e) => setFaviconUrl(e.target.value)}
                 className="w-full border rounded px-3 py-2"
                 placeholder="https://.../favicon.png"
               />
+              <p className="text-xs text-slate-500 mt-1">
+                لازم يكون رابط صورة (png/ico)، مو رابط موقع.
+              </p>
             </div>
           </div>
         </section>
@@ -139,9 +154,7 @@ export default function Settings() {
 
           <div className="space-y-4">
             <div>
-              <label className="block mb-1 text-sm font-medium">
-                بريد التواصل
-              </label>
+              <label className="block mb-1 text-sm font-medium">بريد التواصل</label>
               <input
                 value={contactEmail}
                 onChange={(e) => setContactEmail(e.target.value)}
@@ -150,9 +163,7 @@ export default function Settings() {
             </div>
 
             <div>
-              <label className="block mb-1 text-sm font-medium">
-                رقم الهاتف / واتساب
-              </label>
+              <label className="block mb-1 text-sm font-medium">رقم الهاتف / واتساب</label>
               <input
                 value={phoneOrWhatsapp}
                 onChange={(e) => setPhoneOrWhatsapp(e.target.value)}
@@ -180,31 +191,26 @@ export default function Settings() {
                   className="w-full border rounded px-3 py-2"
                   placeholder="#2563eb"
                 />
-                <p className="text-xs text-slate-500 mt-1">
-                  اكتب Hex مثل: #2563eb
-                </p>
+                <p className="text-xs text-slate-500 mt-1">Hex مثل: #2563eb</p>
               </div>
 
-              {/* لو فعلت Tailwind advanced: استخدم bg-primary بدل style */}
-              <div
-                className="w-14 h-14 rounded border"
-                style={{ background: primaryColor }}
-              />
+              <div className="w-14 h-14 rounded border" style={{ background: primaryColor }} />
             </div>
 
             {/* Dark Mode Toggle */}
             <div className="flex items-center justify-between border rounded p-3">
               <div>
                 <p className="font-medium text-sm">الوضع الليلي</p>
-                <p className="text-xs text-slate-500">تفعيل Dark Mode للموقع</p>
+                <p className="text-xs text-slate-500">يتطبق فورًا حتى قبل الحفظ</p>
               </div>
 
               <button
                 type="button"
                 onClick={() => setDarkMode((v) => !v)}
                 className={`w-14 h-8 rounded-full transition flex items-center px-1 ${
-                  darkMode ? "bg-primary" : "bg-slate-300"
+                  darkMode ? "" : "bg-slate-300"
                 }`}
+                style={{ backgroundColor: darkMode ? primaryColor : undefined }}
               >
                 <span
                   className={`w-6 h-6 rounded-full bg-white transition ${
@@ -232,8 +238,7 @@ export default function Settings() {
             </select>
 
             <p className="text-xs text-slate-500 mt-1">
-              هذا يغيّر اتجاه الصفحة (RTL/LTR). ترجمة النصوص نفسها نضيفها لاحقًا
-              إذا تبغى.
+              الاتجاه RTL/LTR يتغير فورًا. (الترجمة النصية نضيفها لاحقًا لو تبغى)
             </p>
           </div>
         </section>
@@ -241,14 +246,16 @@ export default function Settings() {
         {/* Save */}
         <div className="flex items-center gap-3">
           <button
+            type="submit"
             disabled={loading}
-            className="bg-primary text-white px-6 py-2 rounded hover:bg-primary/90 transition disabled:opacity-60"
+            className="text-white px-6 py-2 rounded transition disabled:opacity-60 hover:opacity-90"
+            style={{ backgroundColor: primaryColor }}
           >
             {loading ? "جاري الحفظ..." : "حفظ"}
           </button>
 
           <span className="text-xs text-slate-500">
-            يتم تحديث الشريط الجانبي وتطبيق الإعدادات تلقائيًا بعد الحفظ.
+            الحفظ يثبت الإعدادات في قاعدة البيانات.
           </span>
         </div>
       </form>
