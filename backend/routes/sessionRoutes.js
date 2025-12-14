@@ -9,6 +9,7 @@ const {
   updateSession,
   deleteSession,
   getTeacherSessions,
+  getStudentUpcomingSessions,
 } = require("../controllers/sessionController");
 
 const { protect, adminOnly } = require("../middleware/authMiddleware");
