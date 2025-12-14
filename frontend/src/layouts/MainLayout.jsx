@@ -2,7 +2,7 @@ import Navbar from "../components/Navbar/Navbar";
 
 export default function MainLayout({ children }) {
   return (
-    <div className="min-h-screen bg-gray-50">
+    <div className="min-h-screen bg-gray-50 dark:bg-slate-900 text-slate-900 dark:text-slate-100">
       {/* 🔵 NAVBAR ثابت فوق الصفحة */}
       <header>
         <Navbar />

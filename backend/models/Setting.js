@@ -16,9 +16,6 @@ const settingSchema = new mongoose.Schema(
     primaryColor: { type: String, default: "#2563eb" }, // hex
     darkMode: { type: Boolean, default: false },
 
-    // Language
-    language: { type: String, enum: ["ar", "en"], default: "ar" },
-
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: "User",

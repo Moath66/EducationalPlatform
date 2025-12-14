@@ -31,7 +31,6 @@ const updateSettings = async (req, res) => {
       phoneOrWhatsapp,
       primaryColor,
       darkMode,
-      language,
     } = req.body;
 
     let settings = await Setting.findOne();
@@ -52,8 +51,6 @@ const updateSettings = async (req, res) => {
       settings.primaryColor = primaryColor.trim();
 
     if (typeof darkMode === "boolean") settings.darkMode = darkMode;
-
-    if (language === "ar" || language === "en") settings.language = language;
 
     if (req.user && req.user._id) settings.updatedBy = req.user._id;
 

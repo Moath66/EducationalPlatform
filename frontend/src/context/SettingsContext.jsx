@@ -46,13 +46,6 @@ function applyDarkMode(enabled) {
   else root.classList.remove("dark");
 }
 
-function applyLanguage(lang) {
-  const root = document.documentElement;
-  const language = lang === "en" ? "en" : "ar";
-  root.setAttribute("lang", language);
-  root.setAttribute("dir", language === "ar" ? "rtl" : "ltr");
-}
-
 export function SettingsProvider({ children }) {
   const [settings, setSettings] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -66,7 +59,6 @@ export function SettingsProvider({ children }) {
       applyFavicon(data?.faviconUrl);
       applyPrimaryColor(data?.primaryColor);
       applyDarkMode(!!data?.darkMode);
-      applyLanguage(data?.language);
     } catch (err) {
       console.error("Failed to load settings", err);
     } finally {

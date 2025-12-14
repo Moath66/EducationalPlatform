@@ -12,7 +12,6 @@ export default function Settings() {
   const [faviconUrl, setFaviconUrl] = useState("");
   const [primaryColor, setPrimaryColor] = useState("#2563eb");
   const [darkMode, setDarkMode] = useState(false);
-  const [language, setLanguage] = useState("ar");
 
   const [loading, setLoading] = useState(false);
   const { reloadSettings } = useSettings();
@@ -28,7 +27,6 @@ export default function Settings() {
       setFaviconUrl(data.faviconUrl || "");
       setPrimaryColor(data.primaryColor || "#2563eb");
       setDarkMode(!!data.darkMode);
-      setLanguage(data.language || "ar");
     });
   }, []);
 
@@ -39,15 +37,7 @@ export default function Settings() {
     else root.classList.remove("dark");
   }, [darkMode]);
 
-  // ✅ تطبيق فوري للغة (RTL/LTR) حتى قبل الحفظ
-  useEffect(() => {
-    const root = document.documentElement;
-    const lang = language === "en" ? "en" : "ar";
-    root.setAttribute("lang", lang);
-    root.setAttribute("dir", lang === "ar" ? "rtl" : "ltr");
-  }, [language]);
-
-  // ✅ تطبيق فوري للون الأساسي كـ CSS Variable (يساعدك لاحقًا مع Tailwind advanced)
+  // ✅ (اختياري) CSS variable
   useEffect(() => {
     document.documentElement.style.setProperty("--primary", primaryColor);
   }, [primaryColor]);
@@ -65,10 +55,9 @@ export default function Settings() {
         faviconUrl,
         primaryColor,
         darkMode,
-        language,
       });
 
-      await reloadSettings(); // يثبت التغييرات ويطبق favicon وغيرها
+      await reloadSettings();
       alert("تم حفظ الإعدادات بنجاح");
     } catch (err) {
       alert("حدث خطأ أثناء الحفظ");
@@ -78,16 +67,27 @@ export default function Settings() {
   };
 
   const SectionTitle = ({ children }) => (
-    <h3 className="text-lg font-bold text-slate-800 mb-3">{children}</h3>
+    <h3 className="text-lg font-bold text-slate-800 dark:text-slate-100 mb-3">
+      {children}
+    </h3>
   );
+
+  const inputBase =
+    "w-full rounded px-3 py-2 border bg-white text-slate-900 placeholder:text-slate-400 " +
+    "dark:bg-slate-900 dark:text-slate-100 dark:placeholder:text-slate-500 " +
+    "border-slate-300 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-300 dark:focus:ring-slate-700";
+
+  const labelBase = "block mb-1 text-sm font-medium text-slate-700 dark:text-slate-200";
 
   return (
     <AdminLayout>
-      <h2 className="text-2xl font-bold text-slate-800 mb-6">إعدادات المنصة</h2>
+      <h2 className="text-2xl font-bold text-slate-800 dark:text-slate-100 mb-6">
+        إعدادات المنصة
+      </h2>
 
       <form
         onSubmit={handleSubmit}
-        className="bg-white p-6 rounded-lg shadow max-w-2xl space-y-8"
+        className="bg-white dark:bg-slate-900 p-6 rounded-lg shadow max-w-2xl space-y-8 border border-slate-200 dark:border-slate-800"
       >
         {/* General */}
         <section>
@@ -95,54 +95,55 @@ export default function Settings() {
 
           <div className="space-y-4">
             <div>
-              <label className="block mb-1 text-sm font-medium">اسم المنصة</label>
+              <label className={labelBase}>اسم المنصة</label>
               <input
                 value={platformName}
                 onChange={(e) => setPlatformName(e.target.value)}
-                className="w-full border rounded px-3 py-2"
+                className={inputBase}
               />
             </div>
 
             <div>
-              <label className="block mb-1 text-sm font-medium">وصف المنصة</label>
+              <label className={labelBase}>وصف المنصة</label>
               <textarea
                 value={platformDescription}
                 onChange={(e) => setPlatformDescription(e.target.value)}
-                className="w-full border rounded px-3 py-2 min-h-[90px]"
+                className={`${inputBase} min-h-[90px]`}
                 placeholder="مثال: منصة تعليمية لإدارة الطلاب والمعلمين والجلسات..."
               />
             </div>
 
             <div>
-              <label className="block mb-1 text-sm font-medium">رابط الشعار (Logo URL)</label>
+              <label className={labelBase}>رابط الشعار (Logo URL)</label>
               <input
                 value={logoUrl}
                 onChange={(e) => setLogoUrl(e.target.value)}
-                className="w-full border rounded px-3 py-2"
+                className={inputBase}
                 placeholder="https://.../logo.png"
               />
+
               {logoUrl && (
                 <div className="mt-3">
-                  <p className="text-sm text-slate-500 mb-1">معاينة الشعار:</p>
-                  <img
-                    src={logoUrl}
-                    alt="logo"
-                    className="h-16 object-contain border rounded p-2"
-                  />
+                  <p className="text-sm text-slate-500 dark:text-slate-400 mb-2">
+                    معاينة الشعار:
+                  </p>
+                  <div className="inline-flex items-center justify-center border border-slate-200 dark:border-slate-800 rounded p-2 bg-white dark:bg-slate-950">
+                    <img src={logoUrl} alt="logo" className="h-16 object-contain" />
+                  </div>
                 </div>
               )}
             </div>
 
             <div>
-              <label className="block mb-1 text-sm font-medium">رابط أيقونة الموقع (Favicon URL)</label>
+              <label className={labelBase}>رابط أيقونة الموقع (Favicon URL)</label>
               <input
                 value={faviconUrl}
                 onChange={(e) => setFaviconUrl(e.target.value)}
-                className="w-full border rounded px-3 py-2"
+                className={inputBase}
                 placeholder="https://.../favicon.png"
               />
-              <p className="text-xs text-slate-500 mt-1">
-                لازم يكون رابط صورة (png/ico)، مو رابط موقع.
+              <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                لازم يكون رابط صورة مباشر (png/ico/svg)، مو رابط موقع.
               </p>
             </div>
           </div>
@@ -154,20 +155,20 @@ export default function Settings() {
 
           <div className="space-y-4">
             <div>
-              <label className="block mb-1 text-sm font-medium">بريد التواصل</label>
+              <label className={labelBase}>بريد التواصل</label>
               <input
                 value={contactEmail}
                 onChange={(e) => setContactEmail(e.target.value)}
-                className="w-full border rounded px-3 py-2"
+                className={inputBase}
               />
             </div>
 
             <div>
-              <label className="block mb-1 text-sm font-medium">رقم الهاتف / واتساب</label>
+              <label className={labelBase}>رقم الهاتف / واتساب</label>
               <input
                 value={phoneOrWhatsapp}
                 onChange={(e) => setPhoneOrWhatsapp(e.target.value)}
-                className="w-full border rounded px-3 py-2"
+                className={inputBase}
                 placeholder="+9665xxxxxxxx"
               />
             </div>
@@ -182,35 +183,42 @@ export default function Settings() {
             {/* Primary Color */}
             <div className="flex items-center justify-between gap-4">
               <div className="flex-1">
-                <label className="block mb-1 text-sm font-medium">
-                  اللون الأساسي (Primary Color)
-                </label>
+                <label className={labelBase}>اللون الأساسي (Primary Color)</label>
                 <input
                   value={primaryColor}
                   onChange={(e) => setPrimaryColor(e.target.value)}
-                  className="w-full border rounded px-3 py-2"
+                  className={inputBase}
                   placeholder="#2563eb"
                 />
-                <p className="text-xs text-slate-500 mt-1">Hex مثل: #2563eb</p>
+                <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
+                  Hex مثل: #2563eb
+                </p>
               </div>
 
-              <div className="w-14 h-14 rounded border" style={{ background: primaryColor }} />
+              <div
+                className="w-14 h-14 rounded border border-slate-200 dark:border-slate-800"
+                style={{ background: primaryColor }}
+                title={primaryColor}
+              />
             </div>
 
             {/* Dark Mode Toggle */}
-            <div className="flex items-center justify-between border rounded p-3">
+            <div className="flex items-center justify-between border border-slate-200 dark:border-slate-800 rounded p-3 bg-slate-50 dark:bg-slate-950">
               <div>
-                <p className="font-medium text-sm">الوضع الليلي</p>
-                <p className="text-xs text-slate-500">يتطبق فورًا حتى قبل الحفظ</p>
+                <p className="font-medium text-sm text-slate-800 dark:text-slate-100">
+                  الوضع الليلي
+                </p>
+                <p className="text-xs text-slate-500 dark:text-slate-400">
+                  يتطبق فورًا حتى قبل الحفظ
+                </p>
               </div>
 
               <button
                 type="button"
                 onClick={() => setDarkMode((v) => !v)}
-                className={`w-14 h-8 rounded-full transition flex items-center px-1 ${
-                  darkMode ? "" : "bg-slate-300"
-                }`}
+                className="w-14 h-8 rounded-full transition flex items-center px-1 bg-slate-300 dark:bg-slate-700"
                 style={{ backgroundColor: darkMode ? primaryColor : undefined }}
+                aria-label="toggle dark mode"
               >
                 <span
                   className={`w-6 h-6 rounded-full bg-white transition ${
@@ -219,27 +227,6 @@ export default function Settings() {
                 />
               </button>
             </div>
-          </div>
-        </section>
-
-        {/* Language */}
-        <section>
-          <SectionTitle>اللغة</SectionTitle>
-
-          <div>
-            <label className="block mb-1 text-sm font-medium">لغة الواجهة</label>
-            <select
-              value={language}
-              onChange={(e) => setLanguage(e.target.value)}
-              className="w-full border rounded px-3 py-2 bg-white"
-            >
-              <option value="ar">العربية</option>
-              <option value="en">English</option>
-            </select>
-
-            <p className="text-xs text-slate-500 mt-1">
-              الاتجاه RTL/LTR يتغير فورًا. (الترجمة النصية نضيفها لاحقًا لو تبغى)
-            </p>
           </div>
         </section>
 
@@ -254,7 +241,7 @@ export default function Settings() {
             {loading ? "جاري الحفظ..." : "حفظ"}
           </button>
 
-          <span className="text-xs text-slate-500">
+          <span className="text-xs text-slate-500 dark:text-slate-400">
             الحفظ يثبت الإعدادات في قاعدة البيانات.
           </span>
         </div>
