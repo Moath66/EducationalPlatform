@@ -20,6 +20,9 @@ router.get("/", protect, getSessions);
 router.post("/", protect, adminOnly, createSession);
 router.put("/:id", protect, adminOnly, updateSession);
 router.delete("/:id", protect, adminOnly, deleteSession);
+router.get("/teacher", protect, getTeacherSessions);
+router.get("/student/upcoming", protect, getStudentUpcomingSessions);
+
 
 // ✅ تفاصيل جلسة (admin/teacher)
 // (في controller تحقق صلاحية teacher)

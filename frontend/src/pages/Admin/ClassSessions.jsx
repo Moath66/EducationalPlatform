@@ -10,7 +10,6 @@ import {
 } from "../../../api/sessionsApi";
 
 import { fetchCourses } from "../../../api/coursesApi";
-import { fetchTeachers } from "../../../api/usersApi";
 
 const STATUS_LABEL = {
   scheduled: "مجدولة",
@@ -49,8 +48,6 @@ function formatAr(iso) {
 function normalizeList(data) {
   if (!data) return [];
   if (Array.isArray(data)) return data;
-  if (Array.isArray(data.users)) return data.users;
-  if (Array.isArray(data.teachers)) return data.teachers;
   if (Array.isArray(data.courses)) return data.courses;
   if (Array.isArray(data.data)) return data.data;
   return [];
@@ -72,14 +69,12 @@ export default function ClassSessions() {
 
   // dropdown data
   const [courses, setCourses] = useState([]);
-  const [teachers, setTeachers] = useState([]);
   const [loadingMeta, setLoadingMeta] = useState(false);
 
-  // form
+  // form (✅ لا يوجد teacherId هنا)
   const [form, setForm] = useState({
     title: "",
     courseId: "",
-    teacherId: "",
     startAt: "",
     durationMinutes: 60,
     meetUrl: "",
@@ -87,26 +82,25 @@ export default function ClassSessions() {
     notes: "",
   });
 
- async function loadSessions() {
-  setLoading(true);
-  setErr("");
-  try {
-    const data = await fetchSessions({
-      q: q.trim(),
-      status: status === "all" ? "" : status,
-      limit: 50,
-      sort: "-startAt",
-    });
+  async function loadSessions() {
+    setLoading(true);
+    setErr("");
+    try {
+      const data = await fetchSessions({
+        q: q.trim(),
+        status: status === "all" ? "" : status,
+        limit: 50,
+        sort: "-startAt",
+      });
 
-    const list = Array.isArray(data) ? data : data.sessions || [];
-    setSessions(list);
-  } catch (e) {
-    setErr(e.message || "فشل تحميل الجلسات");
-  } finally {
-    setLoading(false);
+      const list = Array.isArray(data) ? data : data.sessions || [];
+      setSessions(list);
+    } catch (e) {
+      setErr(e.message || "فشل تحميل الجلسات");
+    } finally {
+      setLoading(false);
+    }
   }
-}
-
 
   useEffect(() => {
     loadSessions();
@@ -156,14 +150,10 @@ export default function ClassSessions() {
     setLoadingMeta(true);
     setErr("");
     try {
-      const [cData, tData] = await Promise.all([
-        fetchCourses(),
-        fetchTeachers(),
-      ]);
+      const cData = await fetchCourses();
       setCourses(normalizeList(cData));
-      setTeachers(normalizeList(tData));
     } catch (e) {
-      setErr(e.message || "فشل تحميل الكورسات/المعلمين");
+      setErr(e.message || "فشل تحميل الكورسات");
     } finally {
       setLoadingMeta(false);
     }
@@ -175,7 +165,6 @@ export default function ClassSessions() {
     setForm({
       title: "",
       courseId: "",
-      teacherId: "",
       startAt: "",
       durationMinutes: 60,
       meetUrl: "",
@@ -193,7 +182,6 @@ export default function ClassSessions() {
     setForm({
       title: session.title || "",
       courseId: session.courseId?._id || session.courseId || "",
-      teacherId: session.teacherId?._id || session.teacherId || "",
       startAt: session.startAt ? toLocalInputValue(session.startAt) : "",
       durationMinutes: session.durationMinutes || 60,
       meetUrl: session.meetUrl || "",
@@ -211,11 +199,6 @@ export default function ClassSessions() {
 
   function onChangeCourse(courseId) {
     setForm((p) => ({ ...p, courseId }));
-
-    // auto-fill teacher from course if present
-    const c = courses.find((x) => (x._id || x.id) === courseId);
-    const tId = c?.teacherId?._id || c?.teacherId || "";
-    if (tId) setForm((p) => ({ ...p, teacherId: tId }));
   }
 
   async function onSubmit(e) {
@@ -224,13 +207,12 @@ export default function ClassSessions() {
 
     if (!form.title.trim()) return setErr("اكتب اسم الجلسة.");
     if (!form.courseId) return setErr("اختر كورس.");
-    if (!form.teacherId) return setErr("اختر معلم.");
     if (!form.startAt) return setErr("حدد التاريخ والوقت.");
 
+    // ✅ لا نرسل teacherId — السيرفر يجلبه من courseId
     const payload = {
       title: form.title.trim(),
       courseId: form.courseId,
-      teacherId: form.teacherId,
       startAt: new Date(form.startAt).toISOString(),
       durationMinutes: Number(form.durationMinutes) || 60,
       meetUrl: (form.meetUrl || "").trim(),
@@ -275,7 +257,7 @@ export default function ClassSessions() {
           <div>
             <h2 className="cs-title">إدارة جلسات الفصول</h2>
             <p className="cs-subtitle">
-              اختر كورس/معلم من القائمة بدل إدخال IDs يدويًا.
+              اختر الكورس فقط — المعلم يتم ربطه تلقائيًا من الكورس.
             </p>
           </div>
 
@@ -463,8 +445,8 @@ export default function ClassSessions() {
                   </div>
                   <div className="cs-modal__sub">
                     {loadingMeta
-                      ? "جاري تحميل الكورسات والمعلمين..."
-                      : "اختر كورس ومعلم من القوائم."}
+                      ? "جاري تحميل الكورسات..."
+                      : "اختر الكورس فقط — المعلم يجي تلقائيًا."}
                   </div>
                 </div>
                 <button className="iconBtn" onClick={closeModal}>
@@ -511,29 +493,6 @@ export default function ClassSessions() {
                       {courses.map((c) => {
                         const id = c._id || c.id;
                         const name = c.name || c.title || c.code || "Course";
-                        return (
-                          <option key={id} value={id}>
-                            {name}
-                          </option>
-                        );
-                      })}
-                    </select>
-                  </div>
-
-                  <div className="field">
-                    <label>المعلم</label>
-                    <select
-                      value={form.teacherId}
-                      onChange={(e) =>
-                        setForm((p) => ({ ...p, teacherId: e.target.value }))
-                      }
-                      disabled={loadingMeta}
-                    >
-                      <option value="">اختر معلم...</option>
-                      {teachers.map((t) => {
-                        const id = t._id || t.id;
-                        const name =
-                          t.name || t.fullName || t.email || "Teacher";
                         return (
                           <option key={id} value={id}>
                             {name}

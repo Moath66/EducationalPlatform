@@ -9,7 +9,7 @@ import {
   updateCourseStudents,
 } from "../../../api/coursesApi";
 
-import { fetchTeachers, fetchStudents } from "../../../api/usersApi";
+import { fetchStudents, searchUsers } from "../../../api/usersApi"; // ✅ أضفنا searchUsers
 
 function normalizeList(data) {
   if (!data) return [];
@@ -23,7 +23,6 @@ function normalizeList(data) {
 
 export default function ManageCourses() {
   const [courses, setCourses] = useState([]);
-  const [teachers, setTeachers] = useState([]);
   const [students, setStudents] = useState([]);
 
   const [loading, setLoading] = useState(true);
@@ -33,7 +32,13 @@ export default function ManageCourses() {
   // filters
   const [q, setQ] = useState("");
   const [active, setActive] = useState("all"); // all | true | false
-  const [teacherFilter, setTeacherFilter] = useState("all");
+
+  // ✅ بدل teacherFilter dropdown: نخليه فلتر اختياري عبر Teacher ID (بحث)
+  const [teacherFilterId, setTeacherFilterId] = useState("all");
+  const [teacherFilterQuery, setTeacherFilterQuery] = useState("");
+  const [teacherFilterResults, setTeacherFilterResults] = useState([]);
+  const [teacherFilterLoading, setTeacherFilterLoading] = useState(false);
+  const [teacherFilterOpen, setTeacherFilterOpen] = useState(false);
 
   // modal
   const [open, setOpen] = useState(false);
@@ -48,18 +53,22 @@ export default function ManageCourses() {
     studentIds: [],
   });
 
+  // ✅ teacher search in modal
+  const [teacherQuery, setTeacherQuery] = useState("");
+  const [teacherResults, setTeacherResults] = useState([]);
+  const [teacherSearching, setTeacherSearching] = useState(false);
+  const [teacherDropdownOpen, setTeacherDropdownOpen] = useState(false);
+  const [selectedTeacher, setSelectedTeacher] = useState(null);
+
   async function loadMeta() {
     setLoadingMeta(true);
     setErr("");
     try {
-      const [tData, sData] = await Promise.all([
-        fetchTeachers(),
-        fetchStudents(),
-      ]);
-      setTeachers(normalizeList(tData));
+      // ✅ ما عاد نجيب teachers (عشان 1000 معلم)
+      const sData = await fetchStudents();
       setStudents(normalizeList(sData));
     } catch (e) {
-      setErr(e?.message || "فشل تحميل المعلمين/الطلاب");
+      setErr(e?.message || "فشل تحميل الطلاب");
     } finally {
       setLoadingMeta(false);
     }
@@ -72,7 +81,7 @@ export default function ManageCourses() {
       const params = {};
       if (q.trim()) params.q = q.trim();
       if (active !== "all") params.isActive = active;
-      if (teacherFilter !== "all") params.teacherId = teacherFilter;
+      if (teacherFilterId !== "all") params.teacherId = teacherFilterId;
 
       const data = await fetchCourses(params);
       setCourses(normalizeList(data));
@@ -88,6 +97,56 @@ export default function ManageCourses() {
     loadCourses();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ✅ Debounced Teacher Search (Modal)
+  useEffect(() => {
+    const query = teacherQuery.trim();
+    if (!open) return;
+    if (!query) {
+      setTeacherResults([]);
+      setTeacherSearching(false);
+      return;
+    }
+
+    setTeacherSearching(true);
+    const t = setTimeout(async () => {
+      try {
+        const data = await searchUsers({ role: "teacher", q: query });
+        setTeacherResults(normalizeList(data));
+      } catch (e) {
+        // لا نرمي error عام هنا عشان ما نخرب المودال
+        setTeacherResults([]);
+      } finally {
+        setTeacherSearching(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(t);
+  }, [teacherQuery, open]);
+
+  // ✅ Debounced Teacher Search (Filter)
+  useEffect(() => {
+    const query = teacherFilterQuery.trim();
+    if (!query) {
+      setTeacherFilterResults([]);
+      setTeacherFilterLoading(false);
+      return;
+    }
+
+    setTeacherFilterLoading(true);
+    const t = setTimeout(async () => {
+      try {
+        const data = await searchUsers({ role: "teacher", q: query });
+        setTeacherFilterResults(normalizeList(data));
+      } catch (e) {
+        setTeacherFilterResults([]);
+      } finally {
+        setTeacherFilterLoading(false);
+      }
+    }, 350);
+
+    return () => clearTimeout(t);
+  }, [teacherFilterQuery]);
 
   const filtered = useMemo(() => {
     const needle = q.trim().toLowerCase();
@@ -117,6 +176,12 @@ export default function ManageCourses() {
       isActive: true,
       studentIds: [],
     });
+
+    // ✅ reset teacher picker
+    setTeacherQuery("");
+    setTeacherResults([]);
+    setTeacherDropdownOpen(false);
+    setSelectedTeacher(null);
   }
 
   async function openCreate() {
@@ -124,7 +189,7 @@ export default function ManageCourses() {
     setActiveId(null);
     resetForm();
     setOpen(true);
-    if (!teachers.length || !students.length) await loadMeta();
+    if (!students.length) await loadMeta();
   }
 
   async function openEdit(course) {
@@ -146,12 +211,32 @@ export default function ManageCourses() {
       studentIds,
     });
 
+    // ✅ عرض المعلم الحالي (من populate)
+    const tObj =
+      course.teacherId && typeof course.teacherId === "object"
+        ? course.teacherId
+        : null;
+    if (tObj) {
+      setSelectedTeacher({
+        _id: tObj._id || tObj.id,
+        name: tObj.name,
+        email: tObj.email,
+        phone: tObj.phone,
+      });
+      setTeacherQuery(tObj.name || tObj.email || "");
+    } else {
+      setSelectedTeacher(null);
+      setTeacherQuery("");
+    }
+
     setOpen(true);
-    if (!teachers.length || !students.length) await loadMeta();
+    if (!students.length) await loadMeta();
   }
 
   function closeModal() {
     setOpen(false);
+    setTeacherDropdownOpen(false);
+    setTeacherFilterOpen(false);
   }
 
   function toggleStudent(id) {
@@ -163,12 +248,27 @@ export default function ManageCourses() {
     });
   }
 
+  function selectTeacher(t) {
+    const id = t._id || t.id;
+    setSelectedTeacher(t);
+    setForm((p) => ({ ...p, teacherId: id }));
+    setTeacherQuery(t.name || t.email || "");
+    setTeacherDropdownOpen(false);
+  }
+
+  function clearTeacher() {
+    setSelectedTeacher(null);
+    setForm((p) => ({ ...p, teacherId: "" }));
+    setTeacherQuery("");
+    setTeacherResults([]);
+  }
+
   async function onSubmit(e) {
     e.preventDefault();
     setErr("");
 
     if (!form.title.trim()) return setErr("اكتب اسم الكورس.");
-    if (!form.teacherId) return setErr("اختر معلم للكورس.");
+    if (!form.teacherId) return setErr("اختر/ابحث عن معلم للكورس.");
 
     try {
       if (mode === "create") {
@@ -177,9 +277,18 @@ export default function ManageCourses() {
           description: (form.description || "").trim(),
           teacherId: form.teacherId,
           isActive: !!form.isActive,
-          students: form.studentIds, // createCourse يدعم students عندك
         };
-        await createCourse(payload);
+
+        const created = await createCourse(payload);
+
+        // ✅ لو في طلاب مختارين: حدّثهم بعد الإنشاء
+        const createdCourse =
+          created?.course || created?.data?.course || created?.data || null;
+
+        const newId = createdCourse?._id || createdCourse?.id;
+        if (newId && form.studentIds.length > 0) {
+          await updateCourseStudents(newId, form.studentIds);
+        }
       } else {
         const payload = {
           title: form.title.trim(),
@@ -232,7 +341,7 @@ export default function ManageCourses() {
               إدارة الكورسات
             </h2>
             <p className="text-sm text-slate-500 mt-1">
-              أنشئ كورس، اربط المعلم والطلاب، وفعّل/أوقف الكورس.
+              أنشئ كورس، اربط المعلم (بحث)، واربط الطلاب (اختياري).
             </p>
           </div>
 
@@ -281,27 +390,79 @@ export default function ManageCourses() {
               </select>
             </div>
 
-            <div>
+            {/* ✅ Teacher Filter (Search) */}
+            <div className="relative">
               <label className="text-sm text-slate-600 block mb-1">
-                المعلم
+                فلترة حسب معلم
               </label>
-              <select
-                value={teacherFilter}
-                onChange={(e) => setTeacherFilter(e.target.value)}
-                className="w-full border rounded-lg px-3 py-2 bg-white"
-                disabled={loadingMeta}
-              >
-                <option value="all">الكل</option>
-                {teachers.map((t) => {
-                  const id = t._id || t.id;
-                  const name = t.name || t.email || "Teacher";
-                  return (
-                    <option key={id} value={id}>
-                      {name}
-                    </option>
-                  );
-                })}
-              </select>
+              <input
+                value={teacherFilterQuery}
+                onChange={(e) => {
+                  setTeacherFilterQuery(e.target.value);
+                  setTeacherFilterOpen(true);
+                }}
+                onFocus={() => setTeacherFilterOpen(true)}
+                placeholder="ابحث باسم/إيميل/جوال..."
+                className="w-full border rounded-lg px-3 py-2 outline-none focus:ring"
+              />
+
+              <div className="mt-2 flex items-center justify-between text-xs text-slate-500">
+                <span>
+                  {teacherFilterId === "all"
+                    ? "فلتر: الكل"
+                    : `فلتر: ${teacherFilterId}`}
+                </span>
+                {teacherFilterId !== "all" ? (
+                  <button
+                    type="button"
+                    className="underline"
+                    onClick={() => {
+                      setTeacherFilterId("all");
+                      setTeacherFilterQuery("");
+                      setTeacherFilterResults([]);
+                    }}
+                  >
+                    إزالة الفلتر
+                  </button>
+                ) : null}
+              </div>
+
+              {teacherFilterOpen && teacherFilterQuery.trim() ? (
+                <div className="absolute z-20 mt-1 w-full bg-white border rounded-xl shadow p-2 max-h-56 overflow-auto">
+                  {teacherFilterLoading ? (
+                    <div className="text-slate-500 text-sm p-2">
+                      جاري البحث...
+                    </div>
+                  ) : teacherFilterResults.length === 0 ? (
+                    <div className="text-slate-500 text-sm p-2">
+                      لا يوجد نتائج.
+                    </div>
+                  ) : (
+                    teacherFilterResults.map((t) => {
+                      const id = t._id || t.id;
+                      return (
+                        <button
+                          key={id}
+                          type="button"
+                          onClick={() => {
+                            setTeacherFilterId(id);
+                            setTeacherFilterQuery(t.name || t.email || "");
+                            setTeacherFilterOpen(false);
+                          }}
+                          className="w-full text-right px-3 py-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-200"
+                        >
+                          <div className="text-slate-800 font-medium">
+                            {t.name || "—"}
+                          </div>
+                          <div className="text-xs text-slate-500">
+                            {t.email || ""} {t.phone ? `— ${t.phone}` : ""}
+                          </div>
+                        </button>
+                      );
+                    })
+                  )}
+                </div>
+              ) : null}
             </div>
 
             <div className="flex items-end gap-2 justify-end">
@@ -440,7 +601,7 @@ export default function ManageCourses() {
                     {mode === "create" ? "إضافة كورس" : "تعديل كورس"}
                   </div>
                   <div className="text-sm text-slate-500 mt-1">
-                    اختر المعلم، واربط الطلاب (اختياري).
+                    ابحث واختر المعلم، واربط الطلاب (اختياري).
                   </div>
                 </div>
                 <button
@@ -467,29 +628,83 @@ export default function ManageCourses() {
                     />
                   </div>
 
-                  <div>
+                  {/* ✅ Teacher Search Picker */}
+                  <div className="relative">
                     <label className="text-sm text-slate-600 block mb-1">
-                      المعلم
+                      المعلم (بحث)
                     </label>
-                    <select
-                      value={form.teacherId}
-                      onChange={(e) =>
-                        setForm((p) => ({ ...p, teacherId: e.target.value }))
-                      }
-                      className="w-full border rounded-lg px-3 py-2 bg-white"
+
+                    <input
+                      value={teacherQuery}
+                      onChange={(e) => {
+                        setTeacherQuery(e.target.value);
+                        setTeacherDropdownOpen(true);
+                      }}
+                      onFocus={() => setTeacherDropdownOpen(true)}
+                      placeholder="اكتب اسم/إيميل/جوال..."
+                      className="w-full border rounded-lg px-3 py-2 outline-none focus:ring"
                       disabled={loadingMeta}
-                    >
-                      <option value="">اختر معلم...</option>
-                      {teachers.map((t) => {
-                        const id = t._id || t.id;
-                        const name = t.name || t.email || "Teacher";
-                        return (
-                          <option key={id} value={id}>
-                            {name}
-                          </option>
-                        );
-                      })}
-                    </select>
+                    />
+
+                    {/* Selected teacher badge */}
+                    {selectedTeacher ? (
+                      <div className="mt-2 flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-lg px-3 py-2">
+                        <div className="text-sm text-emerald-800">
+                          المختار:{" "}
+                          <span className="font-semibold">
+                            {selectedTeacher.name || selectedTeacher.email}
+                          </span>
+                          {selectedTeacher.email ? (
+                            <span className="text-emerald-700">
+                              {" "}
+                              — {selectedTeacher.email}
+                            </span>
+                          ) : null}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={clearTeacher}
+                          className="text-xs underline text-emerald-800"
+                        >
+                          إزالة
+                        </button>
+                      </div>
+                    ) : null}
+
+                    {/* Dropdown results */}
+                    {teacherDropdownOpen && teacherQuery.trim() ? (
+                      <div className="absolute z-20 mt-1 w-full bg-white border rounded-xl shadow p-2 max-h-56 overflow-auto">
+                        {teacherSearching ? (
+                          <div className="text-slate-500 text-sm p-2">
+                            جاري البحث...
+                          </div>
+                        ) : teacherResults.length === 0 ? (
+                          <div className="text-slate-500 text-sm p-2">
+                            لا يوجد نتائج.
+                          </div>
+                        ) : (
+                          teacherResults.map((t) => {
+                            const id = t._id || t.id;
+                            return (
+                              <button
+                                key={id}
+                                type="button"
+                                onClick={() => selectTeacher(t)}
+                                className="w-full text-right px-3 py-2 rounded-lg hover:bg-slate-50 border border-transparent hover:border-slate-200"
+                              >
+                                <div className="text-slate-800 font-medium">
+                                  {t.name || "—"}
+                                </div>
+                                <div className="text-xs text-slate-500">
+                                  {t.email || ""}{" "}
+                                  {t.phone ? `— ${t.phone}` : ""}
+                                </div>
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
+                    ) : null}
                   </div>
 
                   <div className="md:col-span-2">

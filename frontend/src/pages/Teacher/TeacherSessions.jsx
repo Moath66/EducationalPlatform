@@ -1,3 +1,4 @@
+// frontend/src/pages/Teacher/TeacherSessions.jsx
 import { useEffect, useMemo, useState } from "react";
 import { fetchSessions } from "../../../api/sessionsApi";
 
@@ -34,37 +35,34 @@ export default function TeacherSessions() {
   }, []);
 
   async function load(u) {
-    const teacherId = u?._id || u?.id;
-    if (!teacherId) {
-      setLoading(false);
-      setSessions([]);
-      return;
-    }
-
-    setLoading(true);
     setErr("");
     setCopied("");
 
+    if (!u?._id || u?.role !== "teacher") {
+      setLoading(false);
+      setSessions([]);
+      setErr("لا يوجد صلاحية (Teacher) أو المستخدم غير مسجّل.");
+      return;
+    }
+
+    const teacherId = u._id;
+
+    setLoading(true);
+
     try {
-      // 👇 هامش 12 ساعة للخلف (عشان ما تختفي جلسة “مباشر” أو جلسة بدأت قريب)
+      // 👇 هامش 12 ساعة للخلف (عشان ما تختفي جلسة بدأت قريب أو live)
       const fromDate = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
 
-      // 👇 لا تحصرها على scheduled فقط
-      // نخليها تجيب scheduled + live
+      // ✅ خلي الفلترة من الباك (يدعم scheduled,live)
       const data = await fetchSessions({
         teacherId,
         from: fromDate,
-        limit: 50,
+        status: "scheduled,live",
+        limit: 100,
         sort: "startAt",
-        // إذا الباك يدعم status واحد فقط: لا ترسل status هنا
-        // وفلترها بالفرونت
       });
 
-      let list = normalizeSessions(data);
-
-      // ✅ فلترة من الفرونت: بس scheduled + live
-      list = list.filter((s) => ["scheduled", "live"].includes(s.status));
-
+      const list = normalizeSessions(data);
       setSessions(list);
     } catch (e) {
       setErr(e.message || "فشل تحميل الجلسات");
@@ -88,6 +86,7 @@ export default function TeacherSessions() {
   }, [sessions, q]);
 
   function openAttendance(sessionId) {
+    // ✅ نخليها زي ما هي (وبعدين نحدّث TeacherAttendance يقرأها تلقائياً)
     window.location.href = `/teacher/attendance?sessionId=${sessionId}`;
   }
 
@@ -127,6 +126,12 @@ export default function TeacherSessions() {
         </div>
       ) : null}
 
+      {err ? (
+        <div className="bg-rose-50 border border-rose-200 text-rose-800 p-3 rounded-lg mb-4">
+          {err}
+        </div>
+      ) : null}
+
       <div className="bg-white p-4 rounded-xl shadow mb-5 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
         <div className="flex-1">
           <label className="text-sm text-slate-600 block mb-1">بحث</label>
@@ -142,12 +147,6 @@ export default function TeacherSessions() {
           {loading ? "جاري التحميل..." : `عدد الجلسات: ${filtered.length}`}
         </div>
       </div>
-
-      {err ? (
-        <div className="bg-rose-50 border border-rose-200 text-rose-800 p-3 rounded-lg mb-4">
-          {err}
-        </div>
-      ) : null}
 
       {!user ? (
         <div className="bg-white p-5 rounded-xl shadow text-slate-600">
@@ -166,6 +165,12 @@ export default function TeacherSessions() {
           const id = s._id || s.id;
           const courseName = s.courseId?.name || s.courseId?.title || "—";
           const meet = (s.meetUrl || "").trim();
+          const statusLabel =
+            s.status === "scheduled"
+              ? "مجدولة"
+              : s.status === "live"
+              ? "مباشر"
+              : s.status;
 
           return (
             <div key={id} className="bg-white p-5 rounded-xl shadow">
@@ -179,7 +184,7 @@ export default function TeacherSessions() {
                     دقيقة
                   </p>
                   <p className="text-xs text-slate-400 mt-1">
-                    الحالة: {s.status}
+                    الحالة: {statusLabel}
                   </p>
                 </div>
 

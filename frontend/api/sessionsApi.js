@@ -61,3 +61,15 @@ export async function fetchTeacherUpcomingSessions(
     limit,
   });
 }
+
+// ✅ Teacher: sessions for my courses
+export async function fetchMyTeacherSessions() {
+  const res = await apiClient.get("/api/sessions/teacher");
+  return res.data; // { sessions: [...] }
+}
+
+// ✅ Student: upcoming sessions for enrolled courses
+export async function fetchMyStudentUpcomingSessions() {
+  const res = await apiClient.get("/api/sessions/student/upcoming");
+  return res.data; // { sessions: [...] }
+}

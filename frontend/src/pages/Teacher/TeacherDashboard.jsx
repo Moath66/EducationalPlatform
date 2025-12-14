@@ -142,13 +142,21 @@ export default function TeacherDashboard() {
           </p>
         </div>
 
-        <div className="flex gap-2">
+        <div className="flex gap-2 flex-wrap justify-end">
           <button
             className="px-4 py-2 bg-white border rounded-lg text-sm hover:bg-slate-50"
             onClick={loadData}
             disabled={loading}
           >
             تحديث
+          </button>
+
+          {/* ✅ جديد: الملف الشخصي */}
+          <button
+            className="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm hover:bg-slate-900"
+            onClick={() => (window.location.href = "/teacher/profile")}
+          >
+            👤 الملف الشخصي
           </button>
 
           <button
@@ -348,7 +356,9 @@ export default function TeacherDashboard() {
 
                     <button
                       className="px-3 py-2 bg-gray-100 text-gray-700 rounded-lg text-sm"
-                      onClick={() => (window.location.href = "/teacher/attendance")}
+                      onClick={() =>
+                        (window.location.href = "/teacher/attendance")
+                      }
                     >
                       تسجيل الحضور
                     </button>

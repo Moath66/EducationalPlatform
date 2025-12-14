@@ -192,6 +192,22 @@ export default function StudentDashboard() {
 
       {/* Quick Actions */}
       <div className="flex flex-wrap justify-end gap-3 mb-6">
+        {/* ✅ جديد: جلساتي */}
+        <button
+          onClick={() => (window.location.href = "/student/sessions")}
+          className="px-6 py-3 bg-teal-600 text-white rounded-lg shadow hover:bg-teal-700 transition text-lg font-semibold"
+        >
+          🎓 جلساتي
+        </button>
+
+        {/* ✅ جديد: الملف الشخصي */}
+        <button
+          onClick={() => (window.location.href = "/student/profile")}
+          className="px-6 py-3 bg-slate-700 text-white rounded-lg shadow hover:bg-slate-800 transition text-lg font-semibold"
+        >
+          👤 الملف الشخصي
+        </button>
+
         <button
           onClick={() => (window.location.href = "/student/attendance")}
           className="px-6 py-3 bg-indigo-600 text-white rounded-lg shadow hover:bg-indigo-700 transition text-lg font-semibold"
@@ -218,9 +234,11 @@ export default function StudentDashboard() {
       <div className="bg-white p-5 rounded-xl shadow mb-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xl font-bold text-gray-700">الجلسات القادمة</h2>
+
+          {/* ✅ تعديل: عرض الكل يروح للجلسات */}
           <button
             className="text-sm text-blue-700 font-semibold hover:underline"
-            onClick={() => (window.location.href = "/student/schedule")}
+            onClick={() => (window.location.href = "/student/sessions")}
           >
             عرض الكل
           </button>

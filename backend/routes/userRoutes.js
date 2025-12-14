@@ -9,12 +9,16 @@ const {
   approveUser,
   rejectUser,
   createTeacher,
-  getTeachers, // ✅ جديد
+  getTeachers,
+  searchUsers, // ✅ جديد
 } = require("../controllers/userController");
 
 const router = express.Router();
 
-// ✅ جديد: قائمة المعلمين (تستخدمها صفحة الأدمن عند إنشاء الجلسة)
+// ✅ جديد: بحث مستخدمين (معلمين/طلاب) - مهم لواجهة البحث بدل dropdown
+router.get("/search", protect, adminOnly, searchUsers);
+
+// (قديمة) قائمة المعلمين (لو صفحات قديمة تعتمد عليها)
 router.get("/teachers", protect, adminOnly, getTeachers);
 
 // كل المستخدمين (للأدمن)

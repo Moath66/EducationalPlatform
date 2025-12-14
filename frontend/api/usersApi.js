@@ -40,3 +40,12 @@ export async function fetchStudents(params = {}) {
 export async function fetchUserById(id) {
   throw new Error("GET /api/users/:id غير متوفر حالياً في الباك.");
 }
+
+// ✅ Admin only - search users (teachers/students) for large lists
+// GET /api/users/search?role=teacher&q=ahm
+export async function searchUsers({ role, q }) {
+  const res = await apiClient.get("/api/users/search", {
+    params: { role, q },
+  });
+  return res.data; // { users: [...] }
+}

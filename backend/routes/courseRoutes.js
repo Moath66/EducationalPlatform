@@ -14,6 +14,8 @@ router.get("/:id", protect, courseController.getCourseById);
 // طلاب كورس
 router.get("/:id/students", protect, courseController.getCourseStudents);
 
+router.get("/my", protect, courseController.getMyCourses);
+
 // CRUD (للأدمن)
 router.post("/", protect, adminOnly, courseController.createCourse);
 router.put("/:id", protect, adminOnly, courseController.updateCourse);

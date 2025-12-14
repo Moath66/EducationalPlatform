@@ -1,7 +1,6 @@
 // frontend/src/pages/Teacher/TeacherStudents.jsx
 import { useEffect, useMemo, useState } from "react";
-import { fetchCourses } from "../../../api/coursesApi";
-import { fetchCourseStudents } from "../../../api/coursesApi";
+import { fetchCourses, fetchCourseStudents } from "../../../api/coursesApi";
 
 function normalizeCourses(data) {
   if (!data) return [];
@@ -29,23 +28,36 @@ export default function TeacherStudents() {
     setTeacher(u);
   }, []);
 
-  async function loadMyCourses() {
+  async function loadMyCourses(currentTeacher) {
     setErr("");
     setLoadingCourses(true);
+
+    const tid = currentTeacher?._id || currentTeacher?.id;
+    if (!tid) {
+      setCourses([]);
+      setSelectedCourseId("");
+      setLoadingCourses(false);
+      return;
+    }
+
     try {
       const data = await fetchCourses();
       const all = normalizeCourses(data);
 
       const mine = all.filter((c) => {
-        const tid = c.teacherId?._id || c.teacherId;
-        return String(tid) === String(teacher?._id);
+        const courseTeacherId = c.teacherId?._id || c.teacherId;
+        return String(courseTeacherId) === String(tid);
       });
 
       setCourses(mine);
 
-      // auto-select first course
+      // ✅ لو الكورس المحدد ما عاد موجود، رجّع لأول كورس
       const firstId = mine?.[0]?._id || mine?.[0]?.id || "";
-      setSelectedCourseId((prev) => prev || firstId);
+      setSelectedCourseId((prev) => {
+        if (prev && mine.some((c) => String(c._id || c.id) === String(prev)))
+          return prev;
+        return firstId;
+      });
     } catch (e) {
       setErr(e.message || "فشل تحميل كورسات المعلم");
       setCourses([]);
@@ -64,7 +76,7 @@ export default function TeacherStudents() {
     setErr("");
     setLoadingStudents(true);
     try {
-      const data = await fetchCourseStudents(courseId); // { courseId, students: [...] }
+      const data = await fetchCourseStudents(courseId); // { students: [...] }
       setStudents(Array.isArray(data.students) ? data.students : []);
     } catch (e) {
       setErr(e.message || "فشل تحميل طلاب الكورس");
@@ -75,7 +87,7 @@ export default function TeacherStudents() {
   }
 
   useEffect(() => {
-    if (teacher?._id) loadMyCourses();
+    if (teacher?._id) loadMyCourses(teacher);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [teacher]);
 
@@ -119,7 +131,7 @@ export default function TeacherStudents() {
         </div>
 
         <button
-          onClick={() => teacher?._id && loadMyCourses()}
+          onClick={() => teacher && loadMyCourses(teacher)}
           className="px-4 py-2 rounded-lg border bg-white hover:bg-slate-50"
           disabled={loadingCourses}
         >

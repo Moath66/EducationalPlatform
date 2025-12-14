@@ -1,6 +1,7 @@
 // backend/controllers/sessionController.js
 const mongoose = require("mongoose");
 const Session = require("../models/Session");
+const Course = require("../models/Course");
 
 function isValidObjectId(id) {
   return mongoose.Types.ObjectId.isValid(id);
@@ -45,12 +46,12 @@ function parseStatuses(status) {
 }
 
 // POST /api/sessions
+// POST /api/sessions
 exports.createSession = async (req, res) => {
   try {
     const {
       title,
       courseId,
-      teacherId,
       startAt,
       durationMinutes,
       meetUrl = "",
@@ -58,17 +59,23 @@ exports.createSession = async (req, res) => {
       notes = "",
     } = req.body;
 
-    if (!title || !courseId || !teacherId || !startAt || !durationMinutes) {
+    if (!title || !courseId || !startAt || !durationMinutes) {
       return res.status(400).json({
-        message:
-          "حقول ناقصة. مطلوب: title, courseId, teacherId, startAt, durationMinutes",
+        message: "حقول ناقصة. مطلوب: title, courseId, startAt, durationMinutes",
       });
     }
 
-    if (!isValidObjectId(courseId) || !isValidObjectId(teacherId)) {
-      return res
-        .status(400)
-        .json({ message: "courseId أو teacherId غير صالح." });
+    if (!isValidObjectId(courseId)) {
+      return res.status(400).json({ message: "courseId غير صالح." });
+    }
+
+    // ✅ جيب teacherId من الكورس
+    const course = await Course.findById(courseId).select("teacherId");
+    if (!course) return res.status(404).json({ message: "الكورس غير موجود." });
+
+    const teacherId = course.teacherId;
+    if (!teacherId) {
+      return res.status(400).json({ message: "الكورس بدون معلم مرتبط." });
     }
 
     const startDate = new Date(startAt);
@@ -86,7 +93,7 @@ exports.createSession = async (req, res) => {
     const doc = await Session.create({
       title: title.trim(),
       courseId,
-      teacherId,
+      teacherId, // ✅ من الكورس
       startAt: startDate,
       durationMinutes: dur,
       meetUrl: String(meetUrl || "").trim(),
@@ -118,6 +125,29 @@ exports.getSessions = async (req, res) => {
     } = req.query;
 
     const filter = {};
+
+    // ✅ Student: يشوف جلسات كورساته فقط
+    if (req.user?.role === "student") {
+      const myCourses = await Course.find({
+        students: req.user.id || req.user._id,
+      })
+        .select("_id")
+        .lean();
+
+      const myCourseIds = myCourses.map((c) => c._id);
+
+      // لو ما عنده كورسات -> رجّع فاضي
+      if (myCourseIds.length === 0) {
+        return res.json({
+          total: 0,
+          page: 1,
+          limit: Number(limit) || 20,
+          sessions: [],
+        });
+      }
+
+      filter.courseId = { $in: myCourseIds };
+    }
 
     // ✅ (اختياري) لو Teacher وما أرسل teacherId -> رجّع جلساته فقط
     if (req.user?.role === "teacher" && !teacherId) {
@@ -192,6 +222,21 @@ exports.getSessionById = async (req, res) => {
       .populate("teacherId", "name fullName email");
 
     if (!doc) return res.status(404).json({ message: "الجلسة غير موجودة." });
+
+    // ✅ Student: يمنع الوصول لجلسة مو ضمن كورساته
+    if (req.user?.role === "student") {
+      const myCourses = await Course.find({
+        students: req.user.id || req.user._id,
+      })
+        .select("_id")
+        .lean();
+      const mySet = new Set(myCourses.map((c) => String(c._id)));
+
+      const cid = String(doc.courseId?._id || doc.courseId);
+      if (!mySet.has(cid)) {
+        return res.status(403).json({ message: "Not allowed" });
+      }
+    }
 
     return res.json({ session: doc });
   } catch (err) {
@@ -284,5 +329,56 @@ exports.deleteSession = async (req, res) => {
   } catch (err) {
     console.error("deleteSession error:", err);
     return res.status(500).json({ message: "حدث خطأ في حذف الجلسة." });
+  }
+};
+// ✅ GET /api/sessions/teacher
+exports.getTeacherSessions = async (req, res) => {
+  try {
+    if (req.user?.role !== "teacher") {
+      return res.status(403).json({ message: "Not allowed" });
+    }
+
+    const myCourses = await Course.find({
+      teacherId: req.user.id || req.user._id,
+    }).select("_id");
+    const courseIds = myCourses.map((c) => c._id);
+
+    const sessions = await Session.find({ courseId: { $in: courseIds } })
+      .populate("courseId", "title")
+      .sort({ startAt: 1 });
+
+    return res.json({ sessions });
+  } catch (err) {
+    console.error("getTeacherSessions error:", err);
+    return res.status(500).json({ message: "حدث خطأ في جلب جلسات المعلم." });
+  }
+};
+
+// ✅ GET /api/sessions/student/upcoming
+exports.getStudentUpcomingSessions = async (req, res) => {
+  try {
+    if (req.user?.role !== "student") {
+      return res.status(403).json({ message: "Not allowed" });
+    }
+
+    const myCourses = await Course.find({
+      students: req.user.id || req.user._id,
+    }).select("_id");
+    const courseIds = myCourses.map((c) => c._id);
+
+    const now = new Date();
+
+    const sessions = await Session.find({
+      courseId: { $in: courseIds },
+      startAt: { $gte: now },
+      status: { $in: ["scheduled", "live"] },
+    })
+      .populate("courseId", "title")
+      .sort({ startAt: 1 });
+
+    return res.json({ sessions });
+  } catch (err) {
+    console.error("getStudentUpcomingSessions error:", err);
+    return res.status(500).json({ message: "حدث خطأ في جلب جلسات الطالب." });
   }
 };

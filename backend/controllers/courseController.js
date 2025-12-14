@@ -4,10 +4,17 @@ const User = require("../models/User");
 
 const isNonEmptyString = (v) => typeof v === "string" && v.trim().length > 0;
 
+const normalizeIds = (arr) =>
+  Array.from(
+    new Set(
+      (Array.isArray(arr) ? arr : []).map((x) => String(x)).filter(Boolean)
+    )
+  );
+
 /**
  * GET /api/courses
  * Admin: كل الكورسات
- * Teacher: كورساته فقط (اختياري)
+ * Teacher: كورساته فقط
  */
 exports.getCourses = async (req, res) => {
   try {
@@ -15,15 +22,17 @@ exports.getCourses = async (req, res) => {
 
     const filter = {};
 
-    // فلترة حسب صلاحية المستخدم (اختياري لكنه مفيد)
+    // Teacher يشوف كورساته فقط
     if (req.user?.role === "teacher") {
       filter.teacherId = req.user.id;
     }
 
-    // فلترة اختيارية من query
-    if (teacherId) filter.teacherId = teacherId;
-    if (isActive === "true") filter.isActive = true;
-    if (isActive === "false") filter.isActive = false;
+    // Admin يقدر يفلتر
+    if (req.user?.role === "admin") {
+      if (teacherId) filter.teacherId = teacherId;
+      if (isActive === "true") filter.isActive = true;
+      if (isActive === "false") filter.isActive = false;
+    }
 
     if (q && q.trim()) {
       filter.title = { $regex: q.trim(), $options: "i" };
@@ -51,6 +60,16 @@ exports.getCourseById = async (req, res) => {
 
     if (!course) return res.status(404).json({ message: "Course not found" });
 
+    // Teacher ما يشوف كورس غيره
+    if (req.user?.role === "teacher") {
+      if (
+        String(course.teacherId?._id || course.teacherId) !==
+        String(req.user.id)
+      ) {
+        return res.status(403).json({ message: "Not allowed" });
+      }
+    }
+
     res.json({ course });
   } catch (err) {
     console.error("getCourseById error:", err);
@@ -69,7 +88,7 @@ exports.getCourseStudents = async (req, res) => {
     );
     if (!course) return res.status(404).json({ message: "Course not found" });
 
-    // صلاحيات: المعلم يشوف طلاب كورسه فقط
+    // Teacher يشوف طلاب كورسه فقط
     if (req.user?.role === "teacher") {
       if (String(course.teacherId) !== String(req.user.id)) {
         return res.status(403).json({ message: "Not allowed" });
@@ -90,19 +109,20 @@ exports.getCourseStudents = async (req, res) => {
 
 /**
  * POST /api/courses
- * إنشاء كورس (Admin فقط عادة)
+ * إنشاء كورس (Admin only)
+ * ✅ هنا: الأدمن يربط teacherId فقط — بدون students في create
  */
 exports.createCourse = async (req, res) => {
   try {
-    const { title, description, teacherId, coverImage, students, isActive } =
-      req.body;
+    const { title, description, teacherId, coverImage, isActive } = req.body;
 
     if (!isNonEmptyString(title))
       return res.status(400).json({ message: "title is required" });
+
     if (!teacherId)
       return res.status(400).json({ message: "teacherId is required" });
 
-    const teacher = await User.findById(teacherId);
+    const teacher = await User.findById(teacherId).select("role");
     if (!teacher || teacher.role !== "teacher") {
       return res.status(400).json({ message: "teacherId is invalid" });
     }
@@ -112,7 +132,7 @@ exports.createCourse = async (req, res) => {
       description: isNonEmptyString(description) ? description.trim() : "",
       teacherId,
       coverImage: coverImage || "",
-      students: Array.isArray(students) ? students : [],
+      students: [], // ✅ دائمًا تبدأ فاضية
       isActive: typeof isActive === "boolean" ? isActive : true,
     });
 
@@ -125,7 +145,7 @@ exports.createCourse = async (req, res) => {
 
 /**
  * PUT /api/courses/:id
- * تحديث كورس
+ * تحديث كورس (Admin only)
  */
 exports.updateCourse = async (req, res) => {
   try {
@@ -134,11 +154,8 @@ exports.updateCourse = async (req, res) => {
     const course = await Course.findById(req.params.id);
     if (!course) return res.status(404).json({ message: "Course not found" });
 
-    // صلاحيات المعلم
-    if (
-      req.user?.role === "teacher" &&
-      String(course.teacherId) !== String(req.user.id)
-    ) {
+    // (routes عندك adminOnly، بس نخليها safe)
+    if (req.user?.role !== "admin") {
       return res.status(403).json({ message: "Not allowed" });
     }
 
@@ -150,7 +167,9 @@ exports.updateCourse = async (req, res) => {
     }
 
     if (description !== undefined) {
-      course.description = isNonEmptyString(description) ? description.trim() : "";
+      course.description = isNonEmptyString(description)
+        ? description.trim()
+        : "";
     }
 
     if (coverImage !== undefined) course.coverImage = coverImage || "";
@@ -158,7 +177,7 @@ exports.updateCourse = async (req, res) => {
     if (isActive !== undefined) course.isActive = Boolean(isActive);
 
     if (teacherId !== undefined) {
-      const teacher = await User.findById(teacherId);
+      const teacher = await User.findById(teacherId).select("role");
       if (!teacher || teacher.role !== "teacher") {
         return res.status(400).json({ message: "teacherId is invalid" });
       }
@@ -174,7 +193,7 @@ exports.updateCourse = async (req, res) => {
 };
 
 /**
- * DELETE /api/courses/:id
+ * DELETE /api/courses/:id (Admin only)
  */
 exports.deleteCourse = async (req, res) => {
   try {
@@ -190,9 +209,9 @@ exports.deleteCourse = async (req, res) => {
 };
 
 /**
- * PUT /api/courses/:id/students
- * body: { studentIds: ["...","..."] }  -> استبدال القائمة
- * أو body: { add: ["..."], remove: ["..."] }
+ * PUT /api/courses/:id/students (Admin only عندك في routes)
+ * body: { studentIds: [...] } -> استبدال
+ * أو body: { add: [...], remove: [...] }
  */
 exports.updateCourseStudents = async (req, res) => {
   try {
@@ -201,18 +220,10 @@ exports.updateCourseStudents = async (req, res) => {
     const course = await Course.findById(req.params.id);
     if (!course) return res.status(404).json({ message: "Course not found" });
 
-    if (
-      req.user?.role === "teacher" &&
-      String(course.teacherId) !== String(req.user.id)
-    ) {
+    // (routes عندك adminOnly، بس نخليها safe)
+    if (req.user?.role !== "admin") {
       return res.status(403).json({ message: "Not allowed" });
     }
-
-    // helper: normalize array of ids -> strings unique
-    const normalizeIds = (arr) =>
-      Array.from(
-        new Set((Array.isArray(arr) ? arr : []).map((x) => String(x)).filter(Boolean))
-      );
 
     if (Array.isArray(studentIds)) {
       course.students = normalizeIds(studentIds);
@@ -229,6 +240,7 @@ exports.updateCourseStudents = async (req, res) => {
     }
 
     await course.save();
+
     res.json({
       message: "Course students updated",
       courseId: course._id,
@@ -236,6 +248,21 @@ exports.updateCourseStudents = async (req, res) => {
     });
   } catch (err) {
     console.error("updateCourseStudents error:", err);
+    res.status(500).json({ message: "Server error" });
+  }
+};
+
+exports.getMyCourses = async (req, res) => {
+  try {
+    if (req.user?.role !== "teacher") {
+      return res.status(403).json({ message: "Not allowed" });
+    }
+    const courses = await Course.find({ teacherId: req.user.id })
+      .populate("teacherId", "name email role")
+      .sort({ createdAt: -1 });
+    res.json({ courses });
+  } catch (err) {
+    console.error("getMyCourses error:", err);
     res.status(500).json({ message: "Server error" });
   }
 };

@@ -26,6 +26,12 @@ function normalizeSessions(data) {
   return [];
 }
 
+// ✅ اقرأ sessionId من الرابط
+function getQueryParam(name) {
+  const sp = new URLSearchParams(window.location.search);
+  return sp.get(name);
+}
+
 export default function TeacherAttendance() {
   const savedUser = useMemo(
     () => JSON.parse(localStorage.getItem("user") || "null"),
@@ -49,37 +55,6 @@ export default function TeacherAttendance() {
   const [err, setErr] = useState("");
   const [ok, setOk] = useState("");
 
-  async function loadTeacherSessions() {
-    setErr("");
-    setOk("");
-    setLoadingSessions(true);
-    try {
-      const nowIso = new Date().toISOString();
-
-      const data = await fetchSessions({
-        from: nowIso,
-        status: "scheduled",
-        sort: "startAt",
-        limit: 200,
-        // احتياط لو الباك ما يفلتر تلقائيًا
-        teacherId: savedUser?._id || "",
-      });
-
-      const list = normalizeSessions(data);
-      setSessions(list);
-    } catch (e) {
-      setErr(e.message || "فشل تحميل جلسات المعلم");
-      setSessions([]);
-    } finally {
-      setLoadingSessions(false);
-    }
-  }
-
-  useEffect(() => {
-    loadTeacherSessions();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
   async function loadStudentsAndExistingAttendance(sessionObj) {
     setErr("");
     setOk("");
@@ -96,10 +71,14 @@ export default function TeacherAttendance() {
       ]);
 
       // students
+      let studentsList = [];
       if (studentsRes.status === "fulfilled") {
         const st =
           studentsRes.value?.students || studentsRes.value?.data?.students;
-        setStudents(Array.isArray(st) ? st : studentsRes.value?.students || []);
+        studentsList = Array.isArray(st)
+          ? st
+          : studentsRes.value?.students || [];
+        setStudents(studentsList);
       } else {
         setStudents([]);
       }
@@ -110,24 +89,17 @@ export default function TeacherAttendance() {
         existing = attendanceRes.value?.records || [];
       }
 
-      // ابني map مبدئي:
-      // لو فيه attendance سابق -> استخدمه
-      // لو ما فيه -> default absent
-      setAttendanceMap((prev) => {
-        const map = { ...prev };
-        const allStudents =
-          studentsRes.status === "fulfilled"
-            ? studentsRes.value?.students || []
-            : [];
+      setAttendanceMap(() => {
+        const map = {};
 
-        // أولاً: initialize absent للجميع
-        (allStudents || []).forEach((s) => {
+        // default absent للجميع
+        (studentsList || []).forEach((s) => {
           const sid = s._id || s.id;
           if (!sid) return;
-          map[sid] = map[sid] || { status: "absent", note: "" };
+          map[sid] = { status: "absent", note: "" };
         });
 
-        // ثم: طبّق الموجود من الباك
+        // طبّق الموجود من الباك
         existing.forEach((r) => {
           const sid = r.studentId?._id || r.studentId;
           if (!sid) return;
@@ -149,20 +121,68 @@ export default function TeacherAttendance() {
     }
   }
 
-  async function onSelectSession(sessionId) {
+  async function onSelectSession(sessionId, listOverride = null) {
     setSelectedSessionId(sessionId);
     setStudents([]);
     setAttendanceMap({});
     setOk("");
     setErr("");
 
-    const s = sessions.find((x) => String(x._id || x.id) === String(sessionId));
+    const list = listOverride || sessions;
+    const s = list.find((x) => String(x._id || x.id) === String(sessionId));
+
     setSelectedSession(s || null);
 
     if (s) {
       await loadStudentsAndExistingAttendance(s);
     }
   }
+
+  async function loadTeacherSessions() {
+    setErr("");
+    setOk("");
+    setLoadingSessions(true);
+
+    if (!savedUser?._id || savedUser?.role !== "teacher") {
+      setSessions([]);
+      setErr("لا يوجد صلاحية (Teacher) أو المستخدم غير مسجّل");
+      setLoadingSessions(false);
+      return;
+    }
+
+    try {
+      // ✅ هامش 12 ساعة للخلف (عشان live أو جلسة بدأت قريب)
+      const fromDate = new Date(Date.now() - 12 * 60 * 60 * 1000).toISOString();
+
+      // ✅ scheduled + live
+      const data = await fetchSessions({
+        from: fromDate,
+        status: "scheduled,live",
+        sort: "startAt",
+        limit: 200,
+        teacherId: savedUser._id,
+      });
+
+      const list = normalizeSessions(data);
+      setSessions(list);
+
+      // ✅ إذا جاي sessionId من الرابط اختاره تلقائياً
+      const qsSessionId = getQueryParam("sessionId");
+      if (qsSessionId) {
+        await onSelectSession(qsSessionId, list);
+      }
+    } catch (e) {
+      setErr(e.message || "فشل تحميل جلسات المعلم");
+      setSessions([]);
+    } finally {
+      setLoadingSessions(false);
+    }
+  }
+
+  useEffect(() => {
+    loadTeacherSessions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function setStatus(studentId, status) {
     setAttendanceMap((prev) => ({
@@ -198,9 +218,7 @@ export default function TeacherAttendance() {
       return;
     }
 
-    const sessionObj = selectedSession;
-    const sessionId = sessionObj?._id || sessionObj?.id;
-
+    const sessionId = selectedSession?._id || selectedSession?.id;
     if (!sessionId) {
       setErr("جلسة غير صالحة");
       return;
@@ -238,7 +256,7 @@ export default function TeacherAttendance() {
         <div>
           <h1 className="text-3xl font-bold">تسجيل الحضور 📅</h1>
           <p className="text-sm text-slate-500 mt-1">
-            اختر جلسة من جلساتك القادمة ثم سجّل حضور طلاب الكورس.
+            اختر جلسة من جلساتك (مجدولة/مباشر) ثم سجّل حضور طلاب الكورس.
           </p>
         </div>
 
@@ -293,7 +311,7 @@ export default function TeacherAttendance() {
 
         {!loadingSessions && sessions.length === 0 ? (
           <p className="text-xs text-slate-500 mt-2">
-            لا توجد جلسات قادمة (scheduled) لهذا المعلم.
+            لا توجد جلسات (scheduled/live) لهذا المعلم.
           </p>
         ) : null}
       </div>
