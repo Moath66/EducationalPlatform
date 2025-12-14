@@ -182,10 +182,12 @@ exports.createTeacher = async (req, res) => {
         .json({ message: "الاسم والبريد وكلمة المرور مطلوبة" });
     }
 
-    email = email.toLowerCase().trim();
+    email = String(email).toLowerCase().trim();
+    name = String(name).trim();
+    phone = phone ? String(phone).trim() : "";
 
     const exists = await User.findOne({ email });
-    if (exists) return res.status(400).json({ message: "البريد مسجّل مسبقًا" });
+    if (exists) return res.status(409).json({ message: "البريد مسجّل مسبقًا" });
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -195,21 +197,28 @@ exports.createTeacher = async (req, res) => {
       phone,
       password: hashedPassword,
       role: "teacher",
-      // ✅ بما أن الأدمن هو اللي أنشأ الحساب: نخليه موافق عليه
       isApproved: true,
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       message: "تم إنشاء حساب المعلّم بنجاح",
-      teacher: { ...teacher.toObject(), password: undefined },
+      teacher: {
+        _id: teacher._id,
+        name: teacher.name,
+        email: teacher.email,
+        phone: teacher.phone,
+        role: teacher.role,
+        isApproved: teacher.isApproved,
+        createdAt: teacher.createdAt,
+      },
     });
   } catch (err) {
     console.error("createTeacher error:", err);
 
     if (err?.code === 11000) {
-      return res.status(400).json({ message: "البريد مسجّل مسبقًا" });
+      return res.status(409).json({ message: "البريد مسجّل مسبقًا" });
     }
 
-    res.status(500).json({ message: "خطأ أثناء إنشاء حساب المعلّم" });
+    return res.status(500).json({ message: "خطأ أثناء إنشاء حساب المعلّم" });
   }
 };
