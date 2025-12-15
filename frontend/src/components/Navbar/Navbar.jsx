@@ -1,55 +1,80 @@
-import { Link } from "react-router-dom";
+// frontend/src/components/Navbar/Navbar.jsx
+import { Link, NavLink } from "react-router-dom";
 import { useState } from "react";
+
+const navItem = "text-gray-700 font-medium hover:text-teal-600 transition";
+const navItemActive = "text-teal-700 font-semibold";
 
 export default function Navbar() {
   const [open, setOpen] = useState(false);
 
+  const close = () => setOpen(false);
+
   return (
-    <nav className="bg-white shadow-md px-6 py-4 flex justify-between items-center w-full">
+    <nav className="bg-white/90 backdrop-blur border-b border-slate-100 px-5 md:px-8 py-4 flex justify-between items-center w-full sticky top-0 z-50">
+      {/* Brand */}
+      <Link to="/" className="flex items-center gap-2" onClick={close}>
+        <div className="w-9 h-9 rounded-xl bg-teal-600 text-white flex items-center justify-center font-bold">
+          M
+        </div>
+        <div className="leading-tight">
+          <div className="font-extrabold text-slate-900">mnhlyn</div>
+          <div className="text-[11px] text-slate-500">منصة إدارة التعليم</div>
+        </div>
+      </Link>
+
       {/* MOBILE MENU BUTTON */}
       <button
         className="md:hidden text-3xl text-gray-700"
         onClick={() => setOpen(!open)}
+        aria-label="menu"
       >
         ☰
       </button>
 
       {/* NAV LINKS — DESKTOP */}
-      <div className="hidden md:flex items-center gap-12 flex-1">
-        <ul className="flex gap-8 text-base font-medium text-gray-700">
-          <li>
-            <a href="/" className="hover:text-teal-600 transition">
-              الرئيسية
-            </a>
-          </li>
-          <li>
-            <a href="#" className="hover:text-teal-600 transition">
-              المساعدة
-            </a>
-          </li>
-          <li>
-            <a href="#" className="hover:text-teal-600 transition">
-              الفوائد
-            </a>
-          </li>
-          <li>
-            <a href="#" className="hover:text-teal-600 transition">
-              المميزات
-            </a>
-          </li>
-          <li>
-            <a href="#" className="hover:text-teal-600 transition">
-              من نحن
-            </a>
-          </li>
-        </ul>
+      <div className="hidden md:flex items-center gap-10">
+        <NavLink
+          to="/"
+          className={({ isActive }) => (isActive ? navItemActive : navItem)}
+        >
+          الرئيسية
+        </NavLink>
+
+        <NavLink
+          to="/help"
+          className={({ isActive }) => (isActive ? navItemActive : navItem)}
+        >
+          المساعدة
+        </NavLink>
+
+        <NavLink
+          to="/benefits"
+          className={({ isActive }) => (isActive ? navItemActive : navItem)}
+        >
+          الفوائد
+        </NavLink>
+
+        <NavLink
+          to="/features"
+          className={({ isActive }) => (isActive ? navItemActive : navItem)}
+        >
+          المميزات
+        </NavLink>
+
+        <NavLink
+          to="/about"
+          className={({ isActive }) => (isActive ? navItemActive : navItem)}
+        >
+          من نحن
+        </NavLink>
       </div>
 
       {/* LOGIN BUTTON — DESKTOP */}
       <div className="hidden md:flex">
         <Link
           to="/login"
-          className="px-5 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition font-medium flex items-center gap-2"
+          className="px-5 py-2 bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition font-medium flex items-center gap-2 shadow-sm"
         >
           <svg
             className="w-5 h-5"
@@ -70,26 +95,31 @@ export default function Navbar() {
 
       {/* MOBILE MENU DROPDOWN */}
       {open && (
-        <div className="md:hidden absolute top-16 right-0 w-full bg-white shadow-lg rounded-b-lg p-6 flex flex-col gap-4">
-          <a href="/" className="text-gray-700 font-medium hover:text-teal-600">
+        <div className="md:hidden absolute top-[72px] right-0 w-full bg-white shadow-lg border-t border-slate-100 rounded-b-2xl p-6 flex flex-col gap-4">
+          <NavLink to="/" className={navItem} onClick={close}>
             الرئيسية
-          </a>
-          <a href="#" className="text-gray-700 font-medium hover:text-teal-600">
+          </NavLink>
+          <NavLink to="/help" className={navItem} onClick={close}>
             المساعدة
-          </a>
-          <a href="#" className="text-gray-700 font-medium hover:text-teal-600">
+          </NavLink>
+          <NavLink to="/benefits" className={navItem} onClick={close}>
             الفوائد
-          </a>
-          <a href="#" className="text-gray-700 font-medium hover:text-teal-600">
+          </NavLink>
+          <NavLink to="/features" className={navItem} onClick={close}>
             المميزات
-          </a>
-          <a href="#" className="text-gray-700 font-medium hover:text-teal-600">
+          </NavLink>
+
+          <NavLink
+            to="/about"
+            className={({ isActive }) => (isActive ? navItemActive : navItem)}
+          >
             من نحن
-          </a>
+          </NavLink>
 
           <Link
             to="/login"
-            className="text-center mt-4 px-4 py-2 bg-teal-600 text-white rounded-md hover:bg-teal-700 transition"
+            onClick={close}
+            className="text-center mt-2 px-4 py-2 bg-teal-600 text-white rounded-xl hover:bg-teal-700 transition"
           >
             تسجيل الدخول
           </Link>

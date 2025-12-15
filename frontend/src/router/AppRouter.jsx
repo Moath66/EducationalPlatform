@@ -1,5 +1,10 @@
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import LandingPage from "../pages/Landing/LandingPage";
+import HelpPage from "../pages/Landing/HelpPage";
+import BenefitsPage from "../pages/Landing/BenefitsPage";
+import FeaturesPage from "../pages/Landing/FeaturesPage";
+import AboutPage from "../pages/Landing/AboutPage";
+
 import LoginPage from "../pages/Auth/LoginPage";
 import RegisterPage from "../pages/Auth/RegisterPage";
 
@@ -47,6 +52,11 @@ export default function AppRouter() {
         <Route path="/" element={<LandingPage />} />
         <Route path="/login" element={<LoginPage />} />
         <Route path="/register" element={<RegisterPage />} />
+        <Route path="/" element={<LandingPage />} />
+        <Route path="/help" element={<HelpPage />} />
+        <Route path="/benefits" element={<BenefitsPage />} />
+        <Route path="/features" element={<FeaturesPage />} />
+        <Route path="/about" element={<AboutPage />} />
 
         {/* ADMIN */}
         <Route
