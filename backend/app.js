@@ -1,3 +1,4 @@
+// backend/app.js
 const express = require("express");
 const cors = require("cors");
 require("dotenv").config();
@@ -15,7 +16,7 @@ app.use(
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Debug (مهم جداً لتتبع المشكلة في Render)
+// Debug (خليه مؤقتًا)
 app.use((req, res, next) => {
   console.log("📩 NEW REQUEST:", req.method, req.url);
   const ct = req.headers["content-type"] || "";
@@ -28,41 +29,36 @@ app.use((req, res, next) => {
 });
 
 // Routes
-const courseRoutes = require("./routes/courseRoutes");
-app.use("/api/courses", courseRoutes);
-
-const authRoutes = require("./routes/authRoutes");
-app.use("/api/auth", authRoutes);
-
-const userRoutes = require("./routes/userRoutes");
-app.use("/api/users", userRoutes);
-
-const attendanceRoutes = require("./routes/attendanceRoutes");
-app.use("/api/attendance", attendanceRoutes);
-
-console.log("✅ loading routes: studyFileRoutes");
-
-const studyFileRoutes = require("./routes/studyFileRoutes");
-app.use("/api/study-files", studyFileRoutes);
-
-// Static Files
+app.use("/api/courses", require("./routes/courseRoutes"));
+app.use("/api/auth", require("./routes/authRoutes"));
+app.use("/api/users", require("./routes/userRoutes"));
+app.use("/api/attendance", require("./routes/attendanceRoutes"));
+app.use("/api/study-files", require("./routes/studyFileRoutes"));
+app.use("/api/sessions", require("./routes/sessionRoutes"));
+app.use("/api/profile", require("./routes/profileRoutes"));
+app.use("/api/settings", require("./routes/settingRoutes"));
 
 app.use("/uploads", express.static("uploads"));
 
-console.log("✅ loading routes: sessionRoutes");
-
-const sessionRoutes = require("./routes/sessionRoutes");
-app.use("/api/sessions", sessionRoutes);
-
-const profileRoutes = require("./routes/profileRoutes");
-app.use("/api/profile", profileRoutes);
-
-const settingRoutes = require("./routes/settingRoutes");
-app.use("/api/settings", settingRoutes);
-
 // Test
-app.get("/", (req, res) => {
-  res.send("API Working ✔");
+app.get("/", (req, res) => res.send("API Working ✔"));
+
+// ✅ Not Found
+app.use((req, res) => {
+  return res.status(404).json({
+    message: `Route not found: ${req.method} ${req.originalUrl}`,
+    payload: null,
+  });
+});
+
+// ✅ Global Error Handler
+app.use((err, req, res, next) => {
+  console.error("🔥 Global error:", err);
+  const status = err.statusCode || 500;
+  return res.status(status).json({
+    message: err.message || "Internal Server Error",
+    payload: null,
+  });
 });
 
 module.exports = app;

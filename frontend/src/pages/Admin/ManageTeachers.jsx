@@ -65,15 +65,15 @@ export default function ManageTeachers() {
         return;
       }
 
-      await apiClient.post("/api/users/create-teacher", addForm); // ✅ هنا
+      await apiClient.post("/api/users/create-teacher", addForm);
 
       alert("✔ تم إضافة المعلّم بنجاح");
       setShowAdd(false);
       setAddForm({ name: "", email: "", phone: "", password: "" });
       fetchTeachers();
     } catch (err) {
-      console.log(err.response?.data || err);
-      alert("❌ فشل في إضافة المعلّم");
+      console.log(err?.data || err);
+      alert(`❌ فشل في إضافة المعلّم: ${err.message}`);
     }
   };
 

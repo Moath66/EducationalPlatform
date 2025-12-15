@@ -72,8 +72,8 @@ export default function ManageStudents() {
       setAddForm({ name: "", email: "", phone: "", password: "", grade: "" });
       fetchStudents();
     } catch (err) {
-      console.log(err.response?.data || err);
-      alert("❌ فشل في إضافة الطالب");
+      console.log(err?.data || err);
+      alert(`❌ فشل في إضافة الطالب: ${err.message}`);
     }
   };
 
@@ -480,6 +480,3 @@ function InputField({ label, ...props }) {
     </label>
   );
 }
-
-
-
