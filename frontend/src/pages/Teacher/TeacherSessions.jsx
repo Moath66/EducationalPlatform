@@ -101,8 +101,6 @@ export default function TeacherSessions() {
     }
   }
 
-  const meetLink = toExternalUrl(meet);
-
   function toExternalUrl(url) {
     const u = (url || "").trim();
     if (!u) return "";
@@ -181,6 +179,7 @@ export default function TeacherSessions() {
               : s.status === "live"
               ? "مباشر"
               : s.status;
+          const meetLink = toExternalUrl(meet);
 
           return (
             <div key={id} className="bg-white p-5 rounded-xl shadow">

@@ -97,8 +97,6 @@ export default function StudentSessions() {
     });
   }, [sessions, q]);
 
-  const meetLink = toExternalUrl(s.meetUrl);
-
   function toExternalUrl(url) {
     const u = (url || "").trim();
     if (!u) return "";
@@ -208,6 +206,8 @@ export default function StudentSessions() {
               s.teacherId?.fullName ||
               s.teacherId?.email ||
               "—";
+            const meetLink = toExternalUrl(s.meetUrl);
+
             const meet = (s.meetUrl || "").trim();
 
             return (

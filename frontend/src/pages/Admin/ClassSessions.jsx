@@ -250,8 +250,6 @@ export default function ClassSessions() {
     } catch {}
   }
 
-  const meetLink = toExternalUrl(s.meetUrl);
-
   function toExternalUrl(url) {
     const u = (url || "").trim();
     if (!u) return "";
@@ -259,8 +257,6 @@ export default function ClassSessions() {
     if (!/^https?:\/\//i.test(u)) return `https://${u}`;
     return u;
   }
-
-
 
   return (
     <AdminLayout>
@@ -381,6 +377,7 @@ export default function ClassSessions() {
                     s.teacherId?.fullName ||
                     s.teacherId?.email ||
                     "—";
+                  const meetLink = toExternalUrl(s.meetUrl);
 
                   return (
                     <tr key={id}>
