@@ -250,6 +250,18 @@ export default function ClassSessions() {
     } catch {}
   }
 
+  const meetLink = toExternalUrl(s.meetUrl);
+
+  function toExternalUrl(url) {
+    const u = (url || "").trim();
+    if (!u) return "";
+    // لو المستخدم كتب meet.google.com/... أو www... أو أي شيء بدون http
+    if (!/^https?:\/\//i.test(u)) return `https://${u}`;
+    return u;
+  }
+
+
+
   return (
     <AdminLayout>
       <div className="cs-wrap" dir="rtl">
@@ -399,7 +411,7 @@ export default function ClassSessions() {
                             </button>
                             <a
                               className="link"
-                              href={s.meetUrl}
+                              href={meetLink}
                               target="_blank"
                               rel="noreferrer"
                             >

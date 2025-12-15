@@ -101,6 +101,16 @@ export default function TeacherSessions() {
     }
   }
 
+  const meetLink = toExternalUrl(meet);
+
+  function toExternalUrl(url) {
+    const u = (url || "").trim();
+    if (!u) return "";
+    // لو المستخدم كتب meet.google.com/... أو www... أو أي شيء بدون http
+    if (!/^https?:\/\//i.test(u)) return `https://${u}`;
+    return u;
+  }
+
   return (
     <div className="p-6 text-right" dir="rtl">
       <div className="flex items-start justify-between gap-3 mb-6">
@@ -191,14 +201,19 @@ export default function TeacherSessions() {
                 <div className="flex flex-wrap gap-2 justify-end">
                   {meet ? (
                     <>
-                      <a
-                        href={meet}
-                        target="_blank"
-                        rel="noreferrer"
-                        className="px-4 py-2 bg-emerald-600 text-white rounded-lg hover:bg-emerald-700"
+                      <button
+                        type="button"
+                        onClick={() =>
+                          window.open(
+                            toExternalUrl(meet),
+                            "_blank",
+                            "noopener,noreferrer"
+                          )
+                        }
                       >
                         فتح Meet
-                      </a>
+                      </button>
+
                       <button
                         onClick={() => copyMeet(meet)}
                         className="px-4 py-2 bg-white border rounded-lg hover:bg-slate-50"

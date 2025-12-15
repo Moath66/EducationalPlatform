@@ -97,6 +97,16 @@ export default function StudentSessions() {
     });
   }, [sessions, q]);
 
+  const meetLink = toExternalUrl(s.meetUrl);
+
+  function toExternalUrl(url) {
+    const u = (url || "").trim();
+    if (!u) return "";
+    // لو المستخدم كتب meet.google.com/... أو www... أو أي شيء بدون http
+    if (!/^https?:\/\//i.test(u)) return `https://${u}`;
+    return u;
+  }
+
   return (
     <div className="p-6 text-right" dir="rtl">
       <div className="flex items-start justify-between gap-3 mb-5">
@@ -218,14 +228,18 @@ export default function StudentSessions() {
 
                 <div className="flex gap-2 justify-end">
                   {meet ? (
-                    <a
-                      className="px-4 py-2 rounded-lg bg-emerald-600 text-white hover:bg-emerald-700"
-                      href={meet}
-                      target="_blank"
-                      rel="noreferrer"
+                    <button
+                      type="button"
+                      onClick={() =>
+                        window.open(
+                          toExternalUrl(meet),
+                          "_blank",
+                          "noopener,noreferrer"
+                        )
+                      }
                     >
-                      دخول
-                    </a>
+                      فتح Meet
+                    </button>
                   ) : (
                     <span className="px-3 py-2 rounded-lg bg-slate-100 text-slate-600 text-sm">
                       لا يوجد رابط
