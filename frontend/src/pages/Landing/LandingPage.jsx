@@ -49,36 +49,6 @@ export default function LandingPage() {
                     استعراض المميزات
                   </Link>
                 </div>
-
-                {(contactEmail || phoneOrWhatsapp) && (
-                  <div className="mt-6 bg-white border rounded-2xl p-4 text-sm">
-                    <div className="font-bold mb-2">التواصل</div>
-
-                    {contactEmail && (
-                      <div className="text-slate-700">
-                        📧 <span className="font-medium">البريد:</span>{" "}
-                        <a
-                          className="text-teal-700 underline"
-                          href={`mailto:${contactEmail}`}
-                        >
-                          {contactEmail}
-                        </a>
-                      </div>
-                    )}
-
-                    {phoneOrWhatsapp && (
-                      <div className="text-slate-700 mt-2">
-                        📞 <span className="font-medium">الهاتف/واتساب:</span>{" "}
-                        <a
-                          className="text-teal-700 underline"
-                          href={`tel:${phoneOrWhatsapp}`}
-                        >
-                          {phoneOrWhatsapp}
-                        </a>
-                      </div>
-                    )}
-                  </div>
-                )}
               </div>
 
               {/* Right card */}
@@ -181,23 +151,77 @@ export default function LandingPage() {
 
         {/* FOOTER */}
         <footer className="bg-slate-900 text-white">
-          <div className="max-w-6xl mx-auto px-4 md:px-6 py-8 flex flex-col md:flex-row gap-3 md:items-center md:justify-between">
-            <div className="text-sm opacity-90">
-              © {new Date().getFullYear()} {platformName} — All rights reserved.
+          <div className="max-w-6xl mx-auto px-4 md:px-6 py-8">
+            <div className="flex flex-col md:flex-row gap-5 md:items-center md:justify-between">
+              {/* حقوق */}
+              <div className="text-sm opacity-90 text-center md:text-right">
+                © {new Date().getFullYear()} {platformName} — All rights
+                reserved.
+              </div>
+
+              {/* وصف + المطور */}
+              <div className="text-xs opacity-80 flex flex-col md:flex-row md:items-center gap-1 md:gap-3 text-center">
+                <span>
+                  Built with MERN • Secure access • Role-based dashboards
+                </span>
+                <span className="hidden md:inline">—</span>
+                <span>
+                  Developed by{" "}
+                  <span className="font-semibold text-teal-400">
+                    Eng.Moath_dev
+                  </span>
+                </span>
+              </div>
+
+              {/* تواصل (أزرار) */}
+              {contactEmail || phoneOrWhatsapp ? (
+                <div className="flex items-center justify-center md:justify-end gap-2 flex-wrap">
+                  {contactEmail ? (
+                    <a
+                      href={`mailto:${contactEmail}`}
+                      className="px-3 py-2 rounded-xl bg-white/10 border border-white/15 hover:bg-white/15 transition text-xs font-semibold"
+                      dir="ltr"
+                      title="Email"
+                    >
+                      ✉ Email
+                    </a>
+                  ) : null}
+
+                  {phoneOrWhatsapp ? (
+                    <a
+                      href={`https://wa.me/${String(phoneOrWhatsapp).replace(
+                        /\D/g,
+                        ""
+                      )}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="px-3 py-2 rounded-xl bg-teal-600 hover:bg-teal-700 transition text-xs font-semibold"
+                      dir="ltr"
+                      title="WhatsApp"
+                    >
+                      💬 WhatsApp
+                    </a>
+                  ) : null}
+                </div>
+              ) : null}
             </div>
 
-            <div className="text-xs opacity-70 flex flex-col md:flex-row md:items-center gap-1 md:gap-3 text-right">
-              <span>
-                Built with MERN • Secure access • Role-based dashboards
-              </span>
-              <span className="hidden md:inline">—</span>
-              <span>
-                Developed by{" "}
-                <span className="font-semibold text-teal-400">
-                  Eng.Moath_dev
-                </span>
-              </span>
-            </div>
+            {/* سطر صغير تحت (اختياري) */}
+            {contactEmail || phoneOrWhatsapp ? (
+              <div className="mt-4 text-[11px] text-slate-300/80 text-center">
+                للتواصل السريع:{" "}
+                {contactEmail ? (
+                  <span dir="ltr" className="mx-1">
+                    {contactEmail}
+                  </span>
+                ) : null}
+                {phoneOrWhatsapp ? (
+                  <span dir="ltr" className="mx-1">
+                    {phoneOrWhatsapp}
+                  </span>
+                ) : null}
+              </div>
+            ) : null}
           </div>
         </footer>
       </div>
