@@ -22,7 +22,7 @@ import StudentProfilePage from "../pages/Student/StudentProfilePage";
 import StudentSessions from "../pages/Student/StudentSessions";
 import StudentAssignments from "../pages/Student/StudentAssignments";
 import SubmitAssignment from "../pages/Student/SubmitAssignment";
-import SubmitModal from "../components/Modals/SubmitModal";
+import SubmitModal from "../components/student/SubmitModal";
 
 import RequireTeacher from "../middleware/RequireTeacher";
 import TeacherDashboard from "../pages/Teacher/TeacherDashboard";
@@ -35,8 +35,8 @@ import TeacherProfilePage from "../pages/Teacher/TeacherProfilePage";
 import TeacherAssignments from "../pages/Teacher/TeacherAssignments";
 import TeacherSubmission from "../pages/Teacher/TeacherSubmission";
 import TeacherLessons from "../pages/Teacher/TeacherLessons";
-import AssignmentFormModal from "../components/Modals/AssignmentFormModal";
-import LessonFormModal from "../components/Modals/LessonFormModal";
+import AssignmentFormModal from "../components/teacher/AssignmentFormModal";
+import LessonFormModal from "../components/teacher/LessonFormModal";
 import SubmissionsTable from "../components/teacher/SubmissionsTable";
 
 export default function AppRouter() {
