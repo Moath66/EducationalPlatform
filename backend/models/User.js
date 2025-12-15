@@ -8,7 +8,7 @@ const userSchema = new mongoose.Schema(
     email: {
       type: String,
       required: true,
-      unique: true, // ✅ يكفي هذا لوحده
+      unique: true,
       lowercase: true,
       trim: true,
     },
@@ -35,10 +35,14 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// ✅ ضمان lowercase حتى لو جاء بحروف كبيرة
+// ✅ مهم: لازم يكون فيه next parameter (ولا تستخدم arrow function هنا)
 userSchema.pre("save", function (next) {
-  if (this.email) this.email = this.email.toLowerCase().trim();
-  next();
+  try {
+    if (this.email) this.email = String(this.email).toLowerCase().trim();
+    return next();
+  } catch (e) {
+    return next(e);
+  }
 });
 
 module.exports = mongoose.model("User", userSchema);
