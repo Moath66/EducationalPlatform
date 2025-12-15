@@ -185,8 +185,18 @@ export default function LandingPage() {
             <div className="text-sm opacity-90">
               © {new Date().getFullYear()} {platformName} — All rights reserved.
             </div>
-            <div className="text-xs opacity-70">
-              Built with MERN • Secure access • Role-based dashboards
+
+            <div className="text-xs opacity-70 flex flex-col md:flex-row md:items-center gap-1 md:gap-3 text-right">
+              <span>
+                Built with MERN • Secure access • Role-based dashboards
+              </span>
+              <span className="hidden md:inline">—</span>
+              <span>
+                Developed by{" "}
+                <span className="font-semibold text-teal-400">
+                  Eng.Moath_dev
+                </span>
+              </span>
             </div>
           </div>
         </footer>
