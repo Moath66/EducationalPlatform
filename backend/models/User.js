@@ -35,14 +35,9 @@ const userSchema = new mongoose.Schema(
   { timestamps: true }
 );
 
-// ✅ مهم: لازم يكون فيه next parameter (ولا تستخدم arrow function هنا)
-userSchema.pre("save", function (next) {
-  try {
-    if (this.email) this.email = String(this.email).toLowerCase().trim();
-    return next();
-  } catch (e) {
-    return next(e);
-  }
+// ✅ Hook بدون next (أكثر أمانًا ويمنع next is not a function)
+userSchema.pre("save", function () {
+  if (this.email) this.email = String(this.email).toLowerCase().trim();
 });
 
 module.exports = mongoose.model("User", userSchema);
