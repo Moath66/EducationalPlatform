@@ -10,3 +10,9 @@ export async function updateMyProfile(payload) {
   const res = await apiClient.put("/api/profile/me", payload);
   return res.data; // { message, user }
 }
+
+// ✅ تغيير كلمة المرور
+export async function changeMyPassword(payload) {
+  const res = await apiClient.put("/api/profile/password", payload);
+  return res.data; // { message }
+}

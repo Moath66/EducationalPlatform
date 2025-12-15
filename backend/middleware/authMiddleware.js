@@ -19,12 +19,14 @@ exports.protect = async (req, res, next) => {
     }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    const user = await User.findById(decoded.id).select("-password");
 
-    if (!user)
+    // مهم: نمنع "توكن قديم" لو المستخدم انحذف
+    const user = await User.findById(decoded.id).select("-password");
+    if (!user) {
       return res
         .status(401)
         .json({ message: "مستخدم غير موجود", payload: null });
+    }
 
     // السماح للأدمِن بالدخول حتى لو غير معتمد
     if (user.role !== "admin" && !user.isApproved) {
@@ -50,6 +52,26 @@ exports.adminOnly = (req, res, next) => {
     return res
       .status(403)
       .json({ message: "هذا المسار للمدير فقط", payload: null });
+  }
+  return next();
+};
+
+// ✅ جديد: مسار للمعلم فقط (مع السماح للأدمِن)
+exports.teacherOnly = (req, res, next) => {
+  if (!req.user || (req.user.role !== "teacher" && req.user.role !== "admin")) {
+    return res
+      .status(403)
+      .json({ message: "هذا المسار للمعلم فقط", payload: null });
+  }
+  return next();
+};
+
+// ✅ جديد: مسار للطالب فقط (مع السماح للأدمِن)
+exports.studentOnly = (req, res, next) => {
+  if (!req.user || (req.user.role !== "student" && req.user.role !== "admin")) {
+    return res
+      .status(403)
+      .json({ message: "هذا المسار للطالب فقط", payload: null });
   }
   return next();
 };

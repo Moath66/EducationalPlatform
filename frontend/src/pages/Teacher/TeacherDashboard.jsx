@@ -2,6 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { fetchSessions } from "../../../api/sessionsApi";
 import { fetchCourses } from "../../../api/coursesApi";
+import { fetchTeacherAssignments } from "../../../api/assignmentApi";
 
 function formatAr(iso) {
   const d = new Date(iso);
@@ -23,15 +24,65 @@ function normalizeList(data) {
   return [];
 }
 
+function ApiChip({ label, status }) {
+  const state = status?.state || "idle";
+
+  const ui = (() => {
+    if (state === "loading")
+      return {
+        text: "جاري...",
+        cls: "bg-amber-50 border-amber-200 text-amber-800",
+        dot: "bg-amber-500",
+      };
+    if (state === "ok")
+      return {
+        text: "متصل",
+        cls: "bg-emerald-50 border-emerald-200 text-emerald-800",
+        dot: "bg-emerald-500",
+      };
+    if (state === "error")
+      return {
+        text: "فشل",
+        cls: "bg-red-50 border-red-200 text-red-800",
+        dot: "bg-red-500",
+      };
+    return {
+      text: "—",
+      cls: "bg-gray-50 border-gray-200 text-gray-700",
+      dot: "bg-gray-400",
+    };
+  })();
+
+  return (
+    <div
+      className={`border rounded-xl px-3 py-2 flex items-center justify-between ${ui.cls}`}
+      dir="rtl"
+    >
+      <div className="flex items-center gap-2">
+        <span className={`w-2.5 h-2.5 rounded-full ${ui.dot}`} />
+        <span className="font-semibold text-sm">{label}</span>
+      </div>
+      <span className="text-xs">{ui.text}</span>
+    </div>
+  );
+}
+
 export default function TeacherDashboard() {
   const [teacher, setTeacher] = useState(null);
 
   const [courses, setCourses] = useState([]);
   const [sessions, setSessions] = useState([]);
+  const [assignments, setAssignments] = useState([]);
 
   const [loading, setLoading] = useState(true);
   const [err, setErr] = useState("");
   const [copied, setCopied] = useState("");
+
+  const [apiStatus, setApiStatus] = useState({
+    courses: { state: "idle", note: "" }, // idle | loading | ok | error
+    sessions: { state: "idle", note: "" },
+    assignments: { state: "idle", note: "" },
+  });
 
   useEffect(() => {
     const savedUser = JSON.parse(localStorage.getItem("user") || "null");
@@ -48,43 +99,104 @@ export default function TeacherDashboard() {
     setCopied("");
     setLoading(true);
 
+    // ✅ set all to loading
+    setApiStatus({
+      courses: { state: "loading", note: "" },
+      sessions: { state: "loading", note: "" },
+      assignments: { state: "loading", note: "" },
+    });
+
     try {
       if (!teacher?._id) {
         setCourses([]);
         setSessions([]);
+        setAssignments([]);
+        setApiStatus({
+          courses: { state: "error", note: "لا يوجد مستخدم" },
+          sessions: { state: "error", note: "لا يوجد مستخدم" },
+          assignments: { state: "error", note: "لا يوجد مستخدم" },
+        });
         return;
       }
 
-      const now = new Date();
-      const nowIso = now.toISOString();
+      const nowIso = new Date().toISOString();
 
-      const [coursesRes, sessionsRes] = await Promise.all([
-        fetchCourses(),
-        fetchSessions({
-          teacherId: teacher._id, // احتياط لو الباك ما يفلتر تلقائيًا
-          from: nowIso,
-          status: "scheduled",
-          sort: "startAt",
-          limit: 200,
-        }),
+      // ✅ نفصل النداءات عشان نحدد حالة كل API لوحده
+      const coursesP = fetchCourses()
+        .then((res) => {
+          setApiStatus((p) => ({ ...p, courses: { state: "ok", note: "" } }));
+          return res;
+        })
+        .catch((e) => {
+          setApiStatus((p) => ({
+            ...p,
+            courses: { state: "error", note: e?.message || "فشل" },
+          }));
+          return null;
+        });
+
+      const sessionsP = fetchSessions({
+        teacherId: teacher._id,
+        from: nowIso,
+        status: "scheduled",
+        sort: "startAt",
+        limit: 200,
+      })
+        .then((res) => {
+          setApiStatus((p) => ({ ...p, sessions: { state: "ok", note: "" } }));
+          return res;
+        })
+        .catch((e) => {
+          setApiStatus((p) => ({
+            ...p,
+            sessions: { state: "error", note: e?.message || "فشل" },
+          }));
+          return null;
+        });
+
+      const assignmentsP = fetchTeacherAssignments()
+        .then((res) => {
+          setApiStatus((p) => ({
+            ...p,
+            assignments: { state: "ok", note: "" },
+          }));
+          return res;
+        })
+        .catch((e) => {
+          setApiStatus((p) => ({
+            ...p,
+            assignments: { state: "error", note: e?.message || "فشل" },
+          }));
+          return null;
+        });
+
+      const [coursesRes, sessionsRes, assignmentsRes] = await Promise.all([
+        coursesP,
+        sessionsP,
+        assignmentsP,
       ]);
 
+      // ✅ Courses
       const allCourses = normalizeList(coursesRes);
       const myCourses = allCourses.filter((c) => {
         const tid = c.teacherId?._id || c.teacherId;
         return String(tid) === String(teacher._id);
       });
+      setCourses(myCourses);
 
+      // ✅ Sessions
       const allSessions = Array.isArray(sessionsRes)
         ? sessionsRes
-        : sessionsRes.sessions || [];
-
-      setCourses(myCourses);
+        : sessionsRes?.sessions || [];
       setSessions(allSessions);
+
+      // ✅ Assignments
+      setAssignments(assignmentsRes?.payload || []);
     } catch (e) {
       setErr(e.message || "فشل تحميل بيانات لوحة المعلم");
       setCourses([]);
       setSessions([]);
+      setAssignments([]);
     } finally {
       setLoading(false);
     }
@@ -102,10 +214,13 @@ export default function TeacherDashboard() {
       (s) => new Date(s.startAt).toDateString() === todayStr
     ).length;
 
-    // مجموع الطلاب في كورسات المعلم (Unique)
+    // ✅ مجموع الطلاب في كورسات المعلم (Unique) - يدعم ID أو Object
     const studentSet = new Set();
     courses.forEach((c) => {
-      (c.students || []).forEach((sid) => studentSet.add(String(sid)));
+      (c.students || []).forEach((s) => {
+        const id = s?._id || s;
+        if (id) studentSet.add(String(id));
+      });
     });
 
     return {
@@ -113,8 +228,9 @@ export default function TeacherDashboard() {
       sessionsToday,
       studentsCount: studentSet.size,
       upcomingCount: sessions.length,
+      assignmentsCount: assignments.length,
     };
-  }, [courses, sessions]);
+  }, [courses, sessions, assignments]);
 
   const nextSessions = useMemo(() => sessions.slice(0, 3), [sessions]);
 
@@ -138,7 +254,7 @@ export default function TeacherDashboard() {
             أهلاً، {teacher?.name || "المعلم"} 👋
           </h1>
           <p className="text-sm text-slate-500 mt-1">
-            ملخص سريع لكورساتك وجلساتك القادمة.
+            ملخص سريع لكورساتك وجلساتك وواجباتك.
           </p>
         </div>
 
@@ -151,7 +267,6 @@ export default function TeacherDashboard() {
             تحديث
           </button>
 
-          {/* ✅ جديد: الملف الشخصي */}
           <button
             className="px-4 py-2 bg-slate-800 text-white rounded-lg text-sm hover:bg-slate-900"
             onClick={() => (window.location.href = "/teacher/profile")}
@@ -180,8 +295,8 @@ export default function TeacherDashboard() {
         </div>
       ) : null}
 
-      {/* Stats Cards (Real) */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+      {/* Stats Cards */}
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
         <div className="p-4 bg-white rounded-xl shadow">
           <p className="text-gray-500 text-sm">عدد كورساتي</p>
           <p className="text-3xl font-bold text-teal-600">
@@ -208,8 +323,12 @@ export default function TeacherDashboard() {
           <p className="text-3xl font-bold text-orange-500">
             {loading ? "..." : stats.upcomingCount}
           </p>
-          <p className="text-xs text-slate-400 mt-1">
-            *الواجبات لاحقًا عند إضافة API
+        </div>
+
+        <div className="p-4 bg-white rounded-xl shadow">
+          <p className="text-gray-500 text-sm">الواجبات</p>
+          <p className="text-3xl font-bold text-slate-700">
+            {loading ? "..." : stats.assignmentsCount}
           </p>
         </div>
       </div>
@@ -241,9 +360,7 @@ export default function TeacherDashboard() {
         {/* Lessons */}
         <div className="bg-white p-4 rounded-xl shadow flex flex-col gap-3">
           <h2 className="text-xl font-bold mb-1">الدروس</h2>
-          <p className="text-gray-600 text-sm">
-            إضافة الدروس، رفع ملفات، وروابط YouTube.
-          </p>
+          <p className="text-gray-600 text-sm">إضافة الدروس وروابط YouTube.</p>
           <div className="flex gap-3 justify-end">
             <button
               onClick={() => (window.location.href = "/teacher/lessons")}
@@ -260,12 +377,19 @@ export default function TeacherDashboard() {
           <p className="text-gray-600 text-sm">
             إنشاء واجبات، متابعة التسليمات، واستعراض الطلاب.
           </p>
-          <div className="flex gap-3 justify-end">
+          <div className="flex gap-3 justify-end flex-wrap">
             <button
               onClick={() => (window.location.href = "/teacher/assignments")}
               className="px-4 py-2 bg-teal-600 text-white rounded-lg text-sm"
             >
               إدارة الواجبات
+            </button>
+
+            <button
+              onClick={() => (window.location.href = "/teacher/submissions")}
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg text-sm"
+            >
+              📨 تسليمات الطلاب
             </button>
 
             <button
@@ -302,7 +426,7 @@ export default function TeacherDashboard() {
         </div>
       </div>
 
-      {/* Upcoming Sessions (Real) */}
+      {/* Upcoming Sessions */}
       <div className="bg-white p-5 rounded-xl shadow mb-6">
         <div className="flex items-center justify-between mb-3">
           <h2 className="text-xl font-bold text-gray-800">
@@ -370,9 +494,52 @@ export default function TeacherDashboard() {
         )}
       </div>
 
-      <p className="text-xs text-gray-400 text-center mt-4">
-        *البيانات هنا مربوطة بالـ API (Courses/Sessions). الواجبات لاحقًا.
-      </p>
+      {/* ✅ API Health Bar */}
+      <div className="mt-6 flex justify-center">
+        <div className="bg-white border rounded-2xl shadow-sm px-4 py-3 w-full max-w-3xl">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div>
+              <div className="text-sm font-semibold text-gray-800">
+                حالة الربط بالـ API
+              </div>
+              <div className="text-xs text-gray-500 mt-0.5">
+                يعرض حالة الخدمات لحظيًا (تحميل / نجاح / فشل).
+              </div>
+            </div>
+
+            <button
+              onClick={loadData}
+              disabled={loading}
+              className="px-3 py-2 rounded-lg bg-gray-900 text-white text-xs disabled:opacity-60"
+            >
+              {loading ? "جاري الفحص..." : "إعادة فحص"}
+            </button>
+          </div>
+
+          <div className="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-2">
+            <ApiChip label="Courses" status={apiStatus.courses} />
+            <ApiChip label="Sessions" status={apiStatus.sessions} />
+            <ApiChip label="Assignments" status={apiStatus.assignments} />
+          </div>
+
+          {["courses", "sessions", "assignments"].some(
+            (k) => apiStatus[k]?.state === "error"
+          ) ? (
+            <div className="mt-3 text-xs text-red-700 bg-red-50 border border-red-200 rounded-xl p-2">
+              يوجد خطأ في خدمة واحدة أو أكثر.{" "}
+              {apiStatus.courses?.state === "error"
+                ? `Courses: ${apiStatus.courses.note}. `
+                : ""}
+              {apiStatus.sessions?.state === "error"
+                ? `Sessions: ${apiStatus.sessions.note}. `
+                : ""}
+              {apiStatus.assignments?.state === "error"
+                ? `Assignments: ${apiStatus.assignments.note}. `
+                : ""}
+            </div>
+          ) : null}
+        </div>
+      </div>
     </div>
   );
 }

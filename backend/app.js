@@ -8,7 +8,7 @@ const app = express();
 // Middlewares
 app.use(
   cors({
-    origin: "*",
+    origin: process.env.FRONTEND_URL || "*",
     methods: ["GET", "POST", "PUT", "DELETE"],
     allowedHeaders: ["Content-Type", "Authorization"],
   })
@@ -37,6 +37,10 @@ app.use("/api/study-files", require("./routes/studyFileRoutes"));
 app.use("/api/sessions", require("./routes/sessionRoutes"));
 app.use("/api/profile", require("./routes/profileRoutes"));
 app.use("/api/settings", require("./routes/settingRoutes"));
+app.use("/api/lessons", require("./routes/lessonRoutes"));
+app.use("/api/assignments", require("./routes/assignmentRoutes"));
+app.use("/api/submissions", require("./routes/submissionRoutes"));
+app.use("/api/uploads", require("./routes/uploadRoutes"));
 
 app.use("/uploads", express.static("uploads"));
 
@@ -54,6 +58,20 @@ app.use((req, res) => {
 // ✅ Global Error Handler
 app.use((err, req, res, next) => {
   console.error("🔥 Global error:", err);
+
+  // ✅ Multer errors
+  if (err?.name === "MulterError") {
+    return res.status(400).json({
+      message: err.message || "Multer error",
+      payload: null,
+    });
+  }
+
+  // ✅ fileFilter custom errors
+  if (err?.message && String(err.message).includes("نوع الملف غير مدعوم")) {
+    return res.status(400).json({ message: err.message, payload: null });
+  }
+
   const status = err.statusCode || 500;
   return res.status(status).json({
     message: err.message || "Internal Server Error",

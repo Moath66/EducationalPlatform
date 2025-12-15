@@ -10,6 +10,7 @@ const assignmentSchema = new mongoose.Schema(
     title: { type: String, required: true },
     description: { type: String },
     dueDate: { type: Date },
+    fileUrl: { type: String, default: "" },
   },
   { timestamps: true }
 );

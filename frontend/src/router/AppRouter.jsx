@@ -20,6 +20,9 @@ import StudentSchedule from "../pages/Student/StudentSchedule";
 import StudentStudyPlans from "../pages/Student/StudentStudyPlans";
 import StudentProfilePage from "../pages/Student/StudentProfilePage";
 import StudentSessions from "../pages/Student/StudentSessions";
+import StudentAssignments from "../pages/Student/StudentAssignments";
+import SubmitAssignment from "../pages/Student/SubmitAssignment";
+import SubmitModal from "../components/Modals/SubmitModal";
 
 import RequireTeacher from "../middleware/RequireTeacher";
 import TeacherDashboard from "../pages/Teacher/TeacherDashboard";
@@ -29,6 +32,12 @@ import TeacherStudyFiles from "../pages/Teacher/TeacherStudyFiles";
 import TeacherSessions from "../pages/Teacher/TeacherSessions";
 import TeacherStudents from "../pages/Teacher/TeacherStudents";
 import TeacherProfilePage from "../pages/Teacher/TeacherProfilePage";
+import TeacherAssignments from "../pages/Teacher/TeacherAssignments";
+import TeacherSubmission from "../pages/Teacher/TeacherSubmission";
+import TeacherLessons from "../pages/Teacher/TeacherLessons";
+import AssignmentFormModal from "../components/Modals/AssignmentFormModal";
+import LessonFormModal from "../components/Modals/LessonFormModal";
+import SubmissionsTable from "../components/teacher/SubmissionsTable";
 
 export default function AppRouter() {
   return (
@@ -157,6 +166,32 @@ export default function AppRouter() {
           }
         />
 
+        <Route
+          path="/student/assignments"
+          element={
+            <RequireStudent>
+              <StudentAssignments />
+            </RequireStudent>
+          }
+        />
+
+        <Route
+          path="/student/assignments/submit/:assignmentId"
+          element={
+            <RequireStudent>
+              <SubmitAssignment />
+            </RequireStudent>
+          }
+        />
+        <Route
+          path="/student/assignments/submit-modal/:assignmentId"
+          element={
+            <RequireStudent>
+              <SubmitModal />
+            </RequireStudent>
+          }
+        />
+
         {/* TEACHER */}
         <Route
           path="/teacher"
@@ -211,6 +246,59 @@ export default function AppRouter() {
           element={
             <RequireTeacher>
               <TeacherProfilePage />
+            </RequireTeacher>
+          }
+        />
+        <Route
+          path="/teacher/assignments"
+          element={
+            <RequireTeacher>
+              <TeacherAssignments />
+            </RequireTeacher>
+          }
+        />
+
+        <Route
+          path="/teacher/submissions"
+          element={
+            <RequireTeacher>
+              <TeacherSubmission />
+            </RequireTeacher>
+          }
+        />
+
+        <Route
+          path="/teacher/lessons"
+          element={
+            <RequireTeacher>
+              <TeacherLessons />
+            </RequireTeacher>
+          }
+        />
+
+        <Route
+          path="/teacher/assignments/new"
+          element={
+            <RequireTeacher>
+              <AssignmentFormModal />
+            </RequireTeacher>
+          }
+        />
+
+        <Route
+          path="/teacher/lessons/new"
+          element={
+            <RequireTeacher>
+              <LessonFormModal />
+            </RequireTeacher>
+          }
+        />
+
+        <Route
+          path="/teacher/submissions/table/:assignmentId"
+          element={
+            <RequireTeacher>
+              <SubmissionsTable />
             </RequireTeacher>
           }
         />
