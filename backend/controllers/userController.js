@@ -125,7 +125,6 @@ exports.deleteUser = async (req, res) => {
   }
 };
 
-// ✅ GET /api/users/pending (Admin only)
 exports.getPendingUsers = async (req, res) => {
   try {
     const users = await User.find({ isApproved: false })
@@ -197,7 +196,7 @@ exports.createTeacher = async (req, res) => {
       phone,
       password: hashedPassword,
       role: "teacher",
-      isApproved: true,
+      isApproved: false,
     });
 
     return res.status(201).json({
